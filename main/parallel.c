@@ -79,6 +79,8 @@ int main(int argc, char *argv[]) {
   double* b = calloc(mesh_loc->ncoord_loc, sizeof(double));
   mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
 
+  sleep(myid);
+
   printf("\nProcessor %d rhs:\n", myid);
   for(int i=0;i<mesh_loc->ncoord_loc;i++){
     printf("%lg\n",b[i]);
@@ -86,17 +88,17 @@ int main(int argc, char *argv[]) {
 
   double* rhs_global = calloc(mesh_loc->ncoord_glo, sizeof(double));
   make_global(mesh_loc->c,mesh_loc->ncoord_loc,b,rhs_global);
-
-  if(myid==0){
-    /*printf("\nProcessor %d rhs:\n", myid);
-    for(int i=0;i<mesh_loc->ncoord_loc;i++){
-      printf("%lg\n",b[i]);
-    }*/
-    printf("\nProcessor %d made global rhs:\n", myid);
-    for(int i=0;i<mesh_loc->ncoord_glo;i++){
-      printf("%lg\n",rhs_global[i]);
-    }
+  
+  
+  /*printf("\nProcessor %d rhs:\n", myid);
+  for(int i=0;i<mesh_loc->ncoord_loc;i++){
+    printf("%lg\n",b[i]);
+  }*/
+  printf("\nProcessor %d made global rhs:\n", myid);
+  for(int i=0;i<mesh_loc->ncoord_glo;i++){
+    printf("%lg\n",rhs_global[i]);
   }
+
 
   double recv_global[mesh_loc->ncoord_glo];
   MPI_Allreduce(
