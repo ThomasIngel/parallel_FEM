@@ -10,15 +10,15 @@ double* make_global(index* c,double* r,double* rhs_loc,index nlocal){
   return rhs_loc;
 }
 
-void* accum_vec(index* c, double* vec, double* akkum, index nloc, index n){
-  double vec_loc[nloc];
+double* accum_vec(index* c, double* vec, double* accum, double* vec_loc, index nloc, index n){
   MPI_Allreduce(
     make_global(c,vec,vec_loc,nloc),
-    akkum,
+    accum,
     n,
     MPI_DOUBLE,
     MPI_SUM,
     MPI_COMM_WORLD);
+  return accum;
 }
 
 double* ddot_local(index* c, double* r, double* rhs_glob, index nloc, double* ddot_loc){
@@ -32,30 +32,24 @@ double* ddot_local(index* c, double* r, double* rhs_glob, index nloc, double* dd
 double get_sigma(index* c, double* r, index nloc, index n){
   double rhs_loc[n];
   double rhs_glob[n];
-  accum_vec(c,r,rhs_glob,nloc,n);
-  printf("\nrhs_loc = ");
+  double vec_loc[nloc];
+  /*printf("\nrhs_loc = ");
   for(int i=0;i<n;i++) printf("%f ", rhs_loc[i]);
   printf("\nrhs_glob = ");
-  for(int i=0;i<n;i++) printf("%f ", rhs_glob[i]);
+  for(int i=0;i<n;i++) printf("%f ", rhs_glob[i]);*/
   double ddot[1];
   double ddot_loc[1];
   MPI_Allreduce(
-    ddot_local(c,r,rhs_glob,nloc,ddot_loc),
+    ddot_local(c,r,accum_vec(c,r,rhs_glob,vec_loc,nloc,n),nloc,ddot_loc),
     ddot,
     1,
     MPI_DOUBLE,
     MPI_SUM,
     MPI_COMM_WORLD);
+  free(rhs_loc);
+  free(rhs_glob);
+  free(vec_loc);
   return ddot[0];
-}
-
-double get_sigma2(index* c, double* r, index nloc, index n){
-  double rhs_glob[n];
-  accum_vec(c,r,rhs_glob,nloc,n);
-  printf("\nrhs_glob = ");
-  for(int i=0;i<n;i++) printf("%f ", rhs_glob[i]);
-  double ddot = blasl1_ddot(rhs_glob,rhs_glob,n);
-  return ddot;
 }
 
 int main(int argc, char *argv[]) {
@@ -82,9 +76,11 @@ int main(int argc, char *argv[]) {
   for(int i=0;i<3;i++) printf("%f ",r[i]);
   printf("\n");
 
-  double sigma = get_sigma2(c,r,nloc,n);
+  double sigma = get_sigma(c,r,nloc,n);
+  if(myid==0){
   printf("\nsigma = %f",sigma);
   printf("\n");
+  }
 
   MPI_Finalize();
   return 0;
