@@ -10,7 +10,7 @@ double* make_global(index* c,double* r,double* rhs_loc,index nlocal){
   return rhs_loc;
 }
 
-void* akumm_vec(index* c, double* vec, double* akkum, index nloc, index n){
+void* accumm_vec(index* c, double* vec, double* akkum, index nloc, index n){
   double vec_loc[nloc];
   MPI_Allreduce(
     make_global(c,vec,vec_loc,nloc),
@@ -61,7 +61,7 @@ double get_sigma(index* c, double* r, index nloc, index n){
 
 double get_sigma2(index* c, double* r, index nloc, index n){
   double rhs_glob[n];
-  akumm_vec(c,r,rhs_glob,nloc,n);
+  accumm_vec(c,r,rhs_glob,nloc,n);
   printf("\nrhs_glob = ");
   for(int i=0;i<n;i++) printf("%f ", rhs_glob[i]);
   double ddot = blasl1_ddot(rhs_glob,rhs_glob,n);
