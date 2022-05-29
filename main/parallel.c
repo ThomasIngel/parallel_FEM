@@ -49,6 +49,7 @@ double get_sigma(index* c, double* r, index nloc, index n){
   free(rhs_loc);
   free(rhs_glob);
   free(vec_loc);
+  free(ddot_loc);
   return ddot[0];
 }
 
