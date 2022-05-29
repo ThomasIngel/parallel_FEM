@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   index c[3] = { myid*2, myid*2+1, myid*2+2 };
   double r[3] = { 1, 1, 1 };
 
-  sleep(myid);
+  sleep(myid*2);
 
   printf("\n---Process %d---\n",myid);
   printf("\nc: ");
