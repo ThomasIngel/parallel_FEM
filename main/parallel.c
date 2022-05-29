@@ -36,15 +36,10 @@ void* make_local(index *c,index nlocal,double *rhs_glob,double *rhs_loc){
   }
 }
 
-void* get_local_m(index* c, double* r, double* m_loc, index nlocal){
-
-}
-
 int main(int argc, char *argv[]) {
 
   int numprocs;
 	int myid;
-	int i;
   const int root=0;
 	MPI_Status stat;
 
@@ -60,8 +55,8 @@ int main(int argc, char *argv[]) {
     mesh* H = get_refined_mesh(1);
     ncoords = H->ncoord;
     
-    double* b1 = calloc(ncoords, sizeof(double));  
-    mesh_RHS(H, b1, F_vol, g_Neu); 
+    // double* b1 = calloc(ncoords, sizeof(double));  
+    // mesh_RHS(H, b1, F_vol, g_Neu); 
     /*printf("\nProcessor %d rhs full mesh:\n", myid);
     for(int i=0;i<ncoords;i++){
       printf("%lg\n",b1[i]);
@@ -80,16 +75,14 @@ int main(int argc, char *argv[]) {
 
   mesh_trans* mesh_loc =  scatter_meshes(metra,MPI_COMM_WORLD,anz_dom,ncoords);
   sed* S;
-  S = malloc (sizeof(sed));
-  S = sed_sm_build(mesh_loc);
+  // S = malloc (sizeof(sed));
+  // S = sed_sm_build(mesh_loc);
   double* b = calloc(mesh_loc->ncoord_loc, sizeof(double));
-  mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
+  // mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
 
-  sleep(myid);
-
+  // EASIER VERGLEICHEN 
   for(int i=0;i<mesh_loc->ncoord_loc;i++) b[i] = 1;
-
-  /*
+  
   printf("\nProcessor %d rhs: ", myid);
   for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
   printf("\nProcessor %d neighbours: ", myid);
@@ -98,9 +91,12 @@ int main(int argc, char *argv[]) {
   printf("\nProcessor %d n_single_bdry: ", myid);
   for(int i=0;i<4;i++) printf("%d ",mesh_loc->n_single_bdry[i]);
   printf("\nProcessor %d black: %d", myid,mesh_loc->black);
-  printf("\n");*/
+  printf("\n");
   
+  MPI_Barrier(MPI_COMM_WORLD);
+
   // ------------ GET LOCAL m_i ------------- 
+
   // CROSSPOINT INFO VON ROT ZU BLACK
   if(mesh_loc->black){    //BLACK RECEIVED VON WEST UND EAST  
     if(mesh_loc->neighbours[3] > -1){
@@ -127,19 +123,20 @@ int main(int argc, char *argv[]) {
       MPI_Send(west, 2, MPI_DOUBLE, mesh_loc->neighbours[3], 0, MPI_COMM_WORLD);
     }
   }
+
   // WAIT FOR BLACK
-  
   MPI_Barrier(MPI_COMM_WORLD);
   sleep(myid);
   printf("\nProcessor %d rhs: ", myid);
   for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
-
-  /*
+  printf("\n");
+  
+  
   // REDS AKKUM MIT BLACK NACHBARN
-  if(!mesh_loc->black){     // REDS RECEIVEN DATA VON ALLEN BLACK NACHBARGEBIETEN
-    for(int i=0;i<3;i++){
-      if(mesh_loc->neighbours[i]>-1){
-        double* data[2 + mesh_loc->n_single_bdry[i]];
+  if(!mesh_loc->black){           // REDS RECEIVEN DATA VON ALLEN BLACK NACHBARGEBIETEN
+    for(int i=0;i<4;i++){
+      if(mesh_loc->neighbours[i] > -1){
+        double data[2 + mesh_loc->n_single_bdry[i]];
         // DATA RECEIVE [CROSSP CROSSP (EDGENODE) (...)]
         // CROSSPOINTS VON LINKS NACH RECHTS ODER OBEN NACH UNTEN
         MPI_Recv(data, 2 + mesh_loc->n_single_bdry[i], MPI_DOUBLE, mesh_loc->neighbours[i], MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -169,8 +166,43 @@ int main(int argc, char *argv[]) {
         }  
       }
     }
+  }else{                        // BLACKS SENDEN DATA AN ALLE ROTEN NACHBARN
+    for(int i=0;i<4;i++){
+      if(mesh_loc->neighbours[i] > -1){ 
+        double data[2 + mesh_loc->n_single_bdry[i]];
+        if(i==0){                 // AN SOUTH
+          // CROSSPOINTS
+          data[0] = b[0];
+          data[1] = b[1];
+        }else if(i==1){           // AN EAST
+          // CROSSPOINTS
+          data[0] = b[2];
+          data[1] = b[1];
+        }else if(i==2){           // AN NORTH
+          // CROSSPOINTS
+          data[0] = b[3];
+          data[1] = b[2];
+        }else if(i==3){           // AN WEST
+          // CROSSPOINTS
+          data[0] = b[3];
+          data[1] = b[0];
+        }
+        int entry = 0;
+        for(int k=0;k<i;k++) entry += mesh_loc->n_single_bdry[k];
+        for(int k=0;k<mesh_loc->n_single_bdry[i];k++){
+          data[2+k] = b[entry+k];
+        }
+        MPI_Send(data, 2 + mesh_loc->n_single_bdry[i], MPI_DOUBLE, mesh_loc->neighbours[i], 0, MPI_COMM_WORLD);
+      }
+    }
   }
-  */
+  
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+  sleep(myid);
+  printf("\nProcessor %d rhs: ", myid);
+  for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
+  printf("\n");
 
 
   MPI_Finalize();
