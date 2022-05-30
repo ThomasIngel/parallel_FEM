@@ -94,7 +94,8 @@ void mesh_trans_rhs(const mesh_trans *mesh_loc, double *b,double (*fV)(double *,
 void rhs_Volumen(double p1[2], double p2[2], double p3[2], index typ,double (*fc)(double *, index), double b[3]);
 void rhs_Neumann(double p1[2], double p2[2], index typ, double (*fc)(double *, index), double b[2]);
 
-
-
+void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm);
+double* get_local_ddot(double* m_i, double* r_i, index nloc, double* local_ddot);
+double ddot_parallel(double* m_i, double* r_i, index nloc, MPI_Comm comm);
 
 #endif
