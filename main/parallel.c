@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
 
   int numprocs;
 	int myid;
+  int i;
   const int root=0;
 	MPI_Status stat;
 
@@ -58,7 +59,7 @@ int main(int argc, char *argv[]) {
     // double* b1 = calloc(ncoords, sizeof(double));  
     // mesh_RHS(H, b1, F_vol, g_Neu); 
     /*printf("\nProcessor %d rhs full mesh:\n", myid);
-    for(int i=0;i<ncoords;i++){
+    for(i=0;i<ncoords;i++){
       printf("%lg\n",b1[i]);
     }*/
 
@@ -81,44 +82,45 @@ int main(int argc, char *argv[]) {
   // mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
 
   // EASIER VERGLEICHEN 
-  for(int i=0;i<mesh_loc->ncoord_loc;i++) b[i] = 1;
+  for(i=0;i<mesh_loc->ncoord_loc;i++) b[i] = 1;
   
   printf("\nProcessor %d rhs: ", myid);
-  for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
+  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
   printf("\nProcessor %d neighbours: ", myid);
-  for(int i=0;i<4;i++) printf("%d ",mesh_loc->neighbours[i]);
+  for(i=0;i<4;i++) printf("%d ",mesh_loc->neighbours[i]);
   printf("\nProcessor %d nedgenodes: %d", myid,mesh_loc->nedgenodes);
   printf("\nProcessor %d n_single_bdry: ", myid);
-  for(int i=0;i<4;i++) printf("%d ",mesh_loc->n_single_bdry[i]);
+  for(i=0;i<4;i++) printf("%d ",mesh_loc->n_single_bdry[i]);
   printf("\nProcessor %d black: %d", myid,mesh_loc->black);
   printf("\n");
   
   MPI_Barrier(MPI_COMM_WORLD);
 
   // ------------ GET LOCAL m_i ------------- 
-
-  // CROSSPOINT INFO VON ROT ZU BLACK
+  double east[2];
+  double west[2];
+  // CROSSPOiNFO VON ROT ZU BLACK
   if(mesh_loc->black){    //BLACK RECEIVED VON WEST UND EAST  
     if(mesh_loc->neighbours[3] > -1){
-      double east[2];
       MPI_Recv(east, 2, MPI_DOUBLE, mesh_loc->neighbours[3], MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       b[0] += east[0];
       b[3] += east[1];
     }
     if(mesh_loc->neighbours[1] > -1){
-      double west[2];
       MPI_Recv(west, 2, MPI_DOUBLE, mesh_loc->neighbours[1], MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       b[1] += west[0];
       b[2] += west[1];
     }
   }else{    //ROT SENDET AN EAST UND WEST  
     if(mesh_loc->neighbours[1] > -1){
-      double east[2] = { b[1], b[2] };
+      // double east[2] = { b[1], b[2] };
+      east[0] = b[1]; east[1] = b[2];
       b[1] = 0; b[2] = 0;
       MPI_Send(east, 2, MPI_DOUBLE, mesh_loc->neighbours[1], 0, MPI_COMM_WORLD);
     }
     if(mesh_loc->neighbours[3] > -1){
-      double west[2] = { b[0], b[3] };
+      // double west[2] = { b[0], b[3] };
+      west[0] = b[0]; west[1] = b[3];
       b[0] = 0; b[3] = 0;
       MPI_Send(west, 2, MPI_DOUBLE, mesh_loc->neighbours[3], 0, MPI_COMM_WORLD);
     }
@@ -127,17 +129,25 @@ int main(int argc, char *argv[]) {
   // WAIT FOR BLACK
   sleep(myid);
   printf("\nProcessor %d rhs: ", myid);
-  for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
+  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
   printf("\n");
   
   
   // REDS AKKUM MIT BLACK NACHBARN
+  int length;
+  int pos;
+  int max_edgenodes = 0;
+  for(i=0;i<4;i++){
+    if(mesh_loc->n_single_bdry[i]>max_edgenodes){
+      max_edgenodes = mesh_loc->n_single_bdry[i];
+    }
+  }
+  double data[2+max_edgenodes];
   if(!mesh_loc->black){           // REDS RECEIVEN DATA VON ALLEN BLACK NACHBARGEBIETEN
-    for(int i=0;i<4;i++){
+    for(i=0;i<4;i++){
       if(mesh_loc->neighbours[i] > -1){
-        int length = 2 + mesh_loc->n_single_bdry[i];
-        // double data[length];
-        double* data =  (double*) malloc(length*sizeof(double));      
+        length = 2 + mesh_loc->n_single_bdry[i];
+        // double* data =  (double*) malloc(length*sizeof(double));      
         // DATA RECEIVE [CROSSP CROSSP (EDGENODE) (...)]
         // CROSSPOINTS VON LINKS NACH RECHTS ODER OBEN NACH UNTEN
         MPI_Recv(data, length, MPI_DOUBLE, mesh_loc->neighbours[i], MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -160,7 +170,7 @@ int main(int argc, char *argv[]) {
           b[0] += data[1];
         }
         // EDGENODES
-        int pos = 4;
+        pos = 4;
         for(int k=0;k<i;k++) pos += mesh_loc->n_single_bdry[k];
         for(int k=0;k<mesh_loc->n_single_bdry[i];k++){
           b[pos+k] += data[2+k];
@@ -168,11 +178,10 @@ int main(int argc, char *argv[]) {
       }
     }
   }else{                        // BLACKS SENDEN DATA AN ALLE ROTEN NACHBARN
-    for(int i=0;i<4;i++){
+    for(i=0;i<4;i++){
       if(mesh_loc->neighbours[i] > -1){ 
-        int length = 2 + mesh_loc->n_single_bdry[i];
-        // double data[length];
-        double* data = (double*)  malloc(length*sizeof(double));
+        length = 2 + mesh_loc->n_single_bdry[i];
+        // double* data = (double*)  malloc(length*sizeof(double));
         if(i==0){                 // AN SOUTH
           // CROSSPOINTS
           data[0] = b[0];
@@ -190,10 +199,10 @@ int main(int argc, char *argv[]) {
           data[0] = b[3];
           data[1] = b[0];
         }
-        int entry = 0;
-        for(int k=0;k<i;k++) entry += mesh_loc->n_single_bdry[k];
+        pos = 0;
+        for(int k=0;k<i;k++) pos += mesh_loc->n_single_bdry[k];
         for(int k=0;k<mesh_loc->n_single_bdry[i];k++){
-          data[2+k] = b[entry+k];
+          data[2+k] = b[pos+k];
         } 
         MPI_Send(data, length, MPI_DOUBLE, mesh_loc->neighbours[i], 0, MPI_COMM_WORLD);
       }
@@ -207,7 +216,7 @@ int main(int argc, char *argv[]) {
   MPI_Barrier(MPI_COMM_WORLD);
   sleep(myid);
   printf("\nProcessor %d rhs: ", myid);
-  for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
+  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
   printf("\n");
 
 
