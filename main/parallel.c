@@ -105,6 +105,10 @@ int main(int argc, char *argv[]) {
   for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",m_i[i]);
   printf("\n");
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  double ddot = ddot_parallel(m_i,b,mesh_loc->ncoord_loc,MPI_COMM_WORLD);
+  printf("\nDDOT = %f",ddot);
+
   MPI_Finalize();
   return 0;
 }
