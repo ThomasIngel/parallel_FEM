@@ -69,7 +69,9 @@ HPC = \
  sed_sm_build.o \
  mpi_scatter_mesh.o \
  accum_vec.o \
- ddot_parallel.o
+ ddot_parallel.o \
+ cg_parallel.o
+
 
 
 $(HPC): ../Include/hpc.h Makefile
