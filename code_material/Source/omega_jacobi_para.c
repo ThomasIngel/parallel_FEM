@@ -1,17 +1,20 @@
 // omega Jacobi algorithm parallel
 
-// TODO: Zeile 26, 46, 51, 79, 84 :)
+// TODO: Zeile 26, 46, 51, 79, 84 überprüfen ob die Funktionen richtig verwendet wurden :)
 
 #include "hpc.h"
+#include "mesh_trans.h"
+#include "mpi.h"
 
 void
-omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol) {
+omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
     // A     - Part of a stiffness matrix (sed Format!)
     // b     - Part of the righthand side
     // u     - Part of the inital guess for the solution
     // omega - often 2/3
     // tol   - Toleranz (stopping criteria)
+    // the rest is not important to know inside of this parallel solver
 
     double *Ax = A->x; // data of A
 
@@ -23,8 +26,8 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
     // accumulated version of the diagonal
     // P is the amount of processors on which we split our problem
     // C is an incidence matrix
-    // TODO: OLIS AKKUMULATIONS FUNKTION, input: diag_inv
-    // bitte in diag_inv speichern (bzw wie und wo wird gespeichert?)
+    // TODO: ist das so korrekt?
+    accum_vec(mesh_loc, diag_inv, diag_inv, comm);
 
     // Alg. 6.6, line 3: d_inv := {1/d_i}, i = 1,...,n
     for(index i = 0; i < n; i++){
@@ -42,13 +45,12 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
     // P is the amount of processors on which we split our problem
     // C is an incidence matrix
     double w[n];
-    blasl1_dcopy(r,w,(index) n,1.);         // copy r into w (w=r)
-    // TODO: OLIS AKKUMULATIONS FUNKTION, input: w
-    // bitte in w speichern :)
+    accum_vec(mesh_loc, r, w, comm);
+    // TODO: ist das so richtig?
 
     // Alg. 6.6, line 7: sigma := sigma_0 := <w,r>
     // computing the scalar product of w and r
-    double sigma_0 = // OLIS SKALARPRODUKT FUNKTION
+    double sigma_0 = ddot_parallel(w,r,n,comm);       // richtig so???
     double sigma = sigma_0;
 
     // initializing the loop variable
@@ -75,13 +77,12 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
         // accumulated version of the residuum
         // P is the amount of processors on which we split our problem
         // C is an incidence matrix
-        blasl1_dcopy(r,w,(index) n,1.);         // copy r into w (w=r)
-        // TODO: OLIS AKKUMULATIONS FUNKTION, input: w
-        // bitte in w speichern :)
+        accum_vec(mesh_loc, r, w, comm);
+        // TODO: ist das so richtig?
 
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
         // computing the scalar product of w and r
-        sigma = // OLIS SKALARPRODUKT FUNKTION
+        sigma = ddot_parallel(w,r,n,comm);          // richtig so????
                
         printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
