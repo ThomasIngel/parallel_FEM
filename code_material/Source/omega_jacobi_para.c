@@ -4,7 +4,7 @@
 
 #include "hpc.h"
 #include "mesh_trans.h"
-#include "mpi.h"
+#include <mpi.h>
 
 void
 omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, mesh_trans *mesh_loc, MPI_Comm comm) {
