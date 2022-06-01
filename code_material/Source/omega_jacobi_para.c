@@ -6,8 +6,21 @@
 #include "mesh_trans.h"
 #include <mpi.h>
 
+void inc_dir_u(double* u, const double* dir, const index* fixed, 
+		const index n_dir){
+	for (index i = 0; i < n_dir; ++i){
+		u[fixed[i]] = dir[i];
+	}
+}
+
+void inc_dir_r(double* r, const index* fixed, const index n_dir){
+	for (index i = 0; i < n_dir; ++i){
+		r[fixed[i]] = 0;
+	}
+}
+
 void
-omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, mesh_trans *mesh_loc, MPI_Comm comm) {
+omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
     // A     - Part of a stiffness matrix (sed Format!)
     // b     - Part of the righthand side
@@ -15,8 +28,25 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
     // omega - often 2/3
     // tol   - Toleranz (stopping criteria)
     // the rest is not important to know inside of this parallel solver
-
+	
+	// gather variables for readability
+	index nfixed = mesh_loc->nfixed_loc;
+	index* fixed = mesh_loc->fixed_loc;
+	double* coord = mesh_loc->domcoord;
+	
+	// calculate dirichlet bcs
+	double dir[nfixed];
+	double x[2];
+	for (index i = 0; i < nfixed; ++i){
+		x[0] = coord[2 * fixed[i]];
+		x[1] = coord[2 * fixed[i] + 1];
+		dir[i] = f_dir(x);
+	}
+	
     double *Ax = A->x; // data of A
+    
+    // incoporate dirichlet in u0
+    inc_dir_u(u, dir, fixed, nfixed);
 
     // Alg. 6.6, line 1: d := diag(A)
     double diag_inv[n];
@@ -40,6 +70,9 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
     double r[n];
     blasl1_dcopy(b,r,(index) n,1.);         //copy b into r (r=b)
     sed_spmv_adapt(A,u,r,-1.0);             //Solution in vector r
+    
+    // set residuum to 0 at dirichlet bcs
+    inc_dir_r(r, fixed, nfixed);
 
     // Alg. 6.6, line 6: w := sum(C^T_s * r_s), s = 1,...,P
     // accumulated version of the residuum
@@ -73,6 +106,9 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
         // calculating the residuum locally
         blasl1_dcopy(b,r,(index) n,1.);  //copy b in r (r=b)
         sed_spmv_adapt(A,u,r,-1.0);
+        
+        // set residuum to 0 at dirichlet bcs
+        inc_dir_r(r, fixed, nfixed);
 
         // Alg. 6.6, line 13: w := sum(C^T_s * r_s), s = 1,...,P
         // accumulated version of the residuum
