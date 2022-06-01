@@ -17,7 +17,7 @@ double kappa( double x[2], index typ )
 
 double F_vol( double x[2], index typ )
 {
-  return ( 4.0 );
+  return ( 1.0 );
 }
 
 double g_Neu( double x[2], index typ )
@@ -28,8 +28,8 @@ double g_Neu( double x[2], index typ )
 
 double u_D( double x[2])
 {
-//  return ( 0.0 );
-  return ( x[0] * x[1] );
+  return ( 0.0 );
+  // return ( x[0] * x[1] );
 }
 
 int main(int argc, char *argv[]) {
@@ -53,9 +53,32 @@ int main(int argc, char *argv[]) {
   if (myid == 0){
     mesh* H = get_refined_mesh(1);
     ncoords = H->ncoord;
+    /*
+    sed* A = sed_nz_pattern(H);
+        
+    // construct my stiffnes matrix and the reference one
+    mesh_stima_global(H, A);
     
-    // double* b1 = calloc(ncoords, sizeof(double));  
-    // mesh_RHS(H, b1, F_vol, g_Neu); 
+    size_t test_n = A->n;
+    // my RHS and the reference one
+    double* b_glob = calloc(test_n, sizeof(double));
+    double* u_glob = calloc(test_n, sizeof(double));
+    
+    mesh_RHS(H, b_glob, F_vol, g_Neu);
+	
+    // TODO: Solve LSE
+    omega_jacobi_seriell(test_n,A,b_glob,u_glob,omega,tol);
+    // cg_seriell(A, b_glob, u_glob, 1e-6);  
+    
+    printf("\nLÖSUNG SERIELL: ", myid);
+    for(i=0;i<test_n;i++){
+      printf("%f ",u_glob[i]);
+    }  
+    
+    free(b_glob);
+    free(u_glob);
+    */
+
     /*printf("\nProcessor %d rhs full mesh:\n", myid);
     for(i=0;i<ncoords;i++){
       printf("%lg\n",b1[i]);
