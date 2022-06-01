@@ -98,4 +98,11 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm);
 double* get_local_ddot(double* m_i, double* r_i, index nloc, double* local_ddot);
 double ddot_parallel(double* m_i, double* r_i, index nloc, MPI_Comm comm);
 
+// CG parallel
+void cg_parallel(const sed *A, const double *b, double *u, double tol, mesh_trans* mesh_loc, MPI_Comm comm);
+index sed_spmv_adapt(const sed *A, const double *x, double *y, double alpha);
+
+// OMEGA JACOBI parallel
+void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, mesh_trans *mesh_loc, MPI_Comm comm);
+
 #endif

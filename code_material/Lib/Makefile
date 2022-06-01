@@ -70,7 +70,9 @@ HPC = \
  mpi_scatter_mesh.o \
  accum_vec.o \
  ddot_parallel.o \
- cg_parallel.o
+ cg_parallel.o \
+ omega_jacobi_para.o \
+ sed_spmv_adapt.o
 
 
 

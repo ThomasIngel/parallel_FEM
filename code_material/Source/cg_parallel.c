@@ -1,12 +1,11 @@
 // cg_parallel
 
 #include "hpc.h"
-#include "blas_level1.h"
 #include "mesh_trans.h"
 #include <mpi.h>
 
 void
-cg_parallel(const sed *A, const double *b, double *u, double tol) {
+cg_parallel(const sed *A, const double *b, double *u, double tol, mesh_trans* mesh_loc, MPI_Comm comm) {
         // A   - Part of the stiffness matrix (sed Format!)
         // b   - Part of the righthand side
         // u   - Part of the inital guess for the solution
@@ -22,10 +21,10 @@ cg_parallel(const sed *A, const double *b, double *u, double tol) {
 
         // w = Akkumulation (Summe über Prozessoren)
         double w[n];                                                            // Dimension??
-        accum_vec(mesh_loc, r, w, MPI_COMM_WORLD);
+        accum_vec(mesh_loc, r, w, comm);
 
         // sigma = w'*r (Skalarprodukt)
-        double sigma_0 = ddot_parallel(w, r, n, MPI_COMM_WORLD);
+        double sigma_0 = ddot_parallel(w, r, n, comm);
         double sigma = sigma_0;
 
         // d = w
@@ -53,7 +52,7 @@ cg_parallel(const sed *A, const double *b, double *u, double tol) {
                 sed_spmv_adapt(A, d, ad, 1.0);
 
                 // alpha = sigma/(d*ad)
-                double dad = ddot_parallel(d, ad, n, MPI_COMM_WORLD);
+                double dad = ddot_parallel(d, ad, n, comm);
                 double alpha = sigma / dad;
 
                 // Update: u = u + alpha*d
@@ -63,10 +62,10 @@ cg_parallel(const sed *A, const double *b, double *u, double tol) {
                 blasl1_daxpy(r, ad, n, -alpha, 1.0);
 
                 // w = Akkumulation (Summe über Prozessoren (C*r))
-                accum_vec(mesh_loc, r, w, MPI_COMM_WORLD);              // Passt das so??
+                accum_vec(mesh_loc, r, w, comm);              // Passt das so??
 
                 // sigma_neu = w' * r
-                double sigma_neu = ddot_parallel(w, r, n, MPI_COMM_WORLD);
+                double sigma_neu = ddot_parallel(w, r, n, comm);
 
                 // d = (sigma_neu/sigma)*d + w
                 blasl1_daxpy(d, w, n, 1.0, sigma_neu / sigma);
@@ -74,7 +73,7 @@ cg_parallel(const sed *A, const double *b, double *u, double tol) {
                 // sigma = sigma_neu
                 sigma = sigma_neu;
 
-                printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
+                // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
         } while (sqrt(sigma) > tol);
 

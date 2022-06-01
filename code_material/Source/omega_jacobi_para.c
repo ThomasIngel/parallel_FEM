@@ -27,11 +27,12 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
     // P is the amount of processors on which we split our problem
     // C is an incidence matrix
     // TODO: ist das so korrekt?
-    accum_vec(mesh_loc, diag_inv, diag_inv, comm);
-
+    double diag_buff[n];
+    accum_vec(mesh_loc, diag_inv, diag_buff, comm);
+    
     // Alg. 6.6, line 3: d_inv := {1/d_i}, i = 1,...,n
     for(index i = 0; i < n; i++){
-        diag_inv[i] = 1 / diag_inv[i]; // compute D^-1 and save it in diag_inv
+        diag_inv[i] = 1 / diag_buff[i]; // compute D^-1 and save it in diag_inv
     }
 
     // Alg. 6.6, line 5: r := b - A * u
@@ -78,14 +79,23 @@ omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, d
         // P is the amount of processors on which we split our problem
         // C is an incidence matrix
         accum_vec(mesh_loc, r, w, comm);
+
         // TODO: ist das so richtig?
 
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
         // computing the scalar product of w and r
+        
         sigma = ddot_parallel(w,r,n,comm);          // richtig so????
-               
-        printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
+        if(k >1) break;
+        // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
     } while (sqrt(sigma) > tol);
-        
+    /*index myid2;
+    MPI_Comm_rank(comm,&myid2);
+    sleep(myid2);
+    printf("\nProcessor %d m_i: ", myid2);
+    for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",w[i]);
+    printf("\nProcessor %d r_i: ", myid2);
+    for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",r[i]);
+    printf("\nProcessor %d local scalar: %f", myid2, sigma);*/
 }
