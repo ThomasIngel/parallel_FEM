@@ -20,8 +20,7 @@ void inc_dir_r(double* r, const index* fixed, const index n_dir){
 	}
 }
 
-void
-omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
+void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
     // A     - Part of a stiffness matrix (sed Format!)
     // b     - Part of the righthand side

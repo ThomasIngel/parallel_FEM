@@ -105,6 +105,6 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol, mesh_tran
 index sed_spmv_adapt(const sed *A, const double *x, double *y, double alpha);
 
 // OMEGA JACOBI parallel
-void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double* (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm);
+void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm);
 
 #endif

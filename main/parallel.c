@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
   
   int change = 0;
   if(change==0){
-    omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, mesh_loc, MPI_COMM_WORLD);
+    omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }
   if(change==1){
     cg_parallel(S, b, u, tol, mesh_loc, MPI_COMM_WORLD);
