@@ -107,6 +107,8 @@ void hpc_prol_quad(double *x, double *y, index *elem, index nC, index nT, index 
 double kappa( double x[2], index typ );
 double F_vol( double x[2], index typ );
 
+void omega_jacobi_seriell(size_t n,const sed *A, const double *b, double *u, double omega, double tol);
+
 #define HPC_MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define HPC_MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define HPC_CSC(A) (A && (A->nz == -1))

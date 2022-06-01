@@ -98,6 +98,8 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm);
 double* get_local_ddot(double* m_i, double* r_i, index nloc, double* local_ddot);
 double ddot_parallel(double* m_i, double* r_i, index nloc, MPI_Comm comm);
 
+void cg_seriell(const sed *A, const double *b, double *u, double tol);
+
 // CG parallel
 void cg_parallel(const sed *A, const double *b, double *u, double tol, 
 		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm);

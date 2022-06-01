@@ -3,6 +3,7 @@
 #include "hpc.h"
 #include "mesh_trans.h"
 #include <mpi.h>
+#include "blas_level1.h"
 
 void
 cg_parallel(const sed *A, const double *b, double *u, double tol, 

@@ -72,7 +72,10 @@ HPC = \
  ddot_parallel.o \
  cg_parallel.o \
  omega_jacobi_para.o \
- sed_spmv_adapt.o
+ sed_spmv_adapt.o \
+ cg_seriell.o \
+ blas_level1.o \
+ omega_jacobi.o
 
 
 
