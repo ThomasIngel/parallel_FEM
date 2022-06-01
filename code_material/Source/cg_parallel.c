@@ -5,19 +5,40 @@
 #include <mpi.h>
 
 void
-cg_parallel(const sed *A, const double *b, double *u, double tol, mesh_trans* mesh_loc, MPI_Comm comm) {
+cg_parallel(const sed *A, const double *b, double *u, double tol, 
+		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm) {
         // A   - Part of the stiffness matrix (sed Format!)
         // b   - Part of the righthand side
         // u   - Part of the inital guess for the solution
         // tol - Toleranz (stopping criteria)
+        
+        // gather variables for readability
+		index nfixed = mesh_loc->nfixed_loc;
+		index* fixed = mesh_loc->fixed_loc;
+		double* coord = mesh_loc->domcoord;
+	
+		// calculate dirichlet bcs
+		double dir[nfixed];
+		double x[2];
+		for (index i = 0; i < nfixed; ++i){
+			x[0] = coord[2 * fixed[i]];
+			x[1] = coord[2 * fixed[i] + 1];
+			dir[i] = f_dir(x);
+		}
 
         index n = A->n ;                                //Matrix Dim
+        
+        // incoporate dirichlet bcs in u0
+        inc_dir_u(u, dir, fixed, nfixed);
 
         double r[n];
         blasl1_dcopy(b, r, n, 1.0);                     //kopiert b in r (also r=b)
 
         // r = b - A*u    r = r-A*u
         sed_spmv_adapt(A, u, r, -1.0);                  //Ergebnis stet in r
+        
+       	// residuum is 0 at dirichlet bcs
+       	inc_dir_r(r, fixed, nfixed);
 
         // w = Akkumulation (Summe über Prozessoren)
         double w[n];                                                            // Dimension??
@@ -60,6 +81,9 @@ cg_parallel(const sed *A, const double *b, double *u, double tol, mesh_trans* me
 
                 // r = r - alpha*ad
                 blasl1_daxpy(r, ad, n, -alpha, 1.0);
+                
+                // residuum is 0 at dirichlet bcs
+                inc_dir_r(r, fixed, nfixed);
 
                 // w = Akkumulation (Summe über Prozessoren (C*r))
                 accum_vec(mesh_loc, r, w, comm);              // Passt das so??

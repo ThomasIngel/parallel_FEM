@@ -17,7 +17,7 @@ double kappa( double x[2], index typ )
 
 double F_vol( double x[2], index typ )
 {
-  return ( 4.0 );
+  return ( 1.0 );
 }
 
 double g_Neu( double x[2], index typ )
@@ -100,12 +100,12 @@ int main(int argc, char *argv[]) {
 
   double* u = calloc(mesh_loc->ncoord_loc, sizeof(double));
   
-  int change = 0;
+  int change = 1;
   if(change==0){
-    omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, mesh_loc, MPI_COMM_WORLD);
+    omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }
   if(change==1){
-    cg_parallel(S, b, u, tol, mesh_loc, MPI_COMM_WORLD);
+    cg_parallel(S, b, u, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
