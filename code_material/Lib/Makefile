@@ -75,7 +75,8 @@ HPC = \
  sed_spmv_adapt.o \
  cg_seriell.o \
  blas_level1.o \
- omega_jacobi.o
+ omega_jacobi.o \
+ inc_dir.o
 
 
 

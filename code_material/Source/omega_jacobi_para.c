@@ -7,19 +7,6 @@
 #include <mpi.h>
 #include "blas_level1.h"
 
-void inc_dir_u(double* u, const double* dir, const index* fixed, 
-		const index n_dir){
-	for (index i = 0; i < n_dir; ++i){
-		u[fixed[i]] = dir[i];
-	}
-}
-
-void inc_dir_r(double* r, const index* fixed, const index n_dir){
-	for (index i = 0; i < n_dir; ++i){
-		r[fixed[i]] = 0;
-	}
-}
-
 void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
     // A     - Part of a stiffness matrix (sed Format!)

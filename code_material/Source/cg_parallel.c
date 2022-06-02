@@ -5,8 +5,7 @@
 #include <mpi.h>
 #include "blas_level1.h"
 
-void
-cg_parallel(const sed *A, const double *b, double *u, double tol, 
+void cg_parallel(const sed *A, const double *b, double *u, double tol, 
 		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm) {
         // A   - Part of the stiffness matrix (sed Format!)
         // b   - Part of the righthand side
