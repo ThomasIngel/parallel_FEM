@@ -2,6 +2,7 @@
 
 #include "hpc.h"
 #include "blas_level1.h"
+#include "mesh_trans.h"
 
 void
 omega_jacobi_seriell(size_t n,

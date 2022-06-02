@@ -2,6 +2,7 @@
 
 #include "hpc.h"
 #include "blas_level1.h"
+#include "mesh_trans.h"
 
 void
 cg_seriell(const sed *A, const double *b, double *u, double tol) {
