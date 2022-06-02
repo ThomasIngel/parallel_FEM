@@ -139,28 +139,28 @@ mesh_trans* scatter_meshes(mesh_trans** global_mesh,MPI_Comm comm,
 	    //Normale Skalare
 	    MPI_Irecv(&local_mesh->ncoord_loc,1,my_MPI_SIZE_T,0,1,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->ncoord_glo,1,my_MPI_SIZE_T,0,2,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->nelem_loc,1,my_MPI_SIZE_T,0,3,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->nbdry_loc,1,my_MPI_SIZE_T,0,4,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->nedgenodes,1,my_MPI_SIZE_T,0,5,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->nfixed_loc,1,my_MPI_SIZE_T,0,6,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(local_mesh->neighbours,4,my_MPI_SIZE_T,0,12,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(local_mesh->n_single_bdry,4,my_MPI_SIZE_T,0,13,
 		    comm,&request_s[count++]);
-
+		
 	    MPI_Irecv(&local_mesh->black,1,MPI_C_BOOL,0,14,
 		    comm,&request_s[count++]);
 	    for(size_t i=0;i<single;++i){
@@ -170,12 +170,15 @@ mesh_trans* scatter_meshes(mesh_trans** global_mesh,MPI_Comm comm,
 	    MPI_Request request_u[numuni];
 	    count=0;
 	    //Uniform Pointer
+		printf("\n10");
+		printf("\nHERE: ");
+		for(int i=0;i<local_mesh->nelem_loc;i++) printf("%d",local_mesh->domelem[i]);
 	    MPI_Irecv(local_mesh->domelem,7*local_mesh->nelem_loc,
 		    my_MPI_SIZE_T,0,7, comm,&request_u[count++]);
-
+		printf("\n12");
 	    MPI_Irecv(local_mesh->c,local_mesh->ncoord_loc,my_MPI_SIZE_T,0,8,
 		    comm,&request_u[count++]);
-
+		printf("\n13");
 	    MPI_Irecv(local_mesh->domcoord,2*local_mesh->ncoord_loc,
 		    MPI_DOUBLE,0,9, comm,&request_u[count++]);
 

@@ -4,6 +4,33 @@
 mesh *get_refined_mesh(int norefine){
 
     // Load and initialize Mesh
+    mesh* H;
+    mesh* M;
+    H = malloc (sizeof(mesh));
+    char *fname = "../code_material/Problem/problem1";
+    H = mesh_load(fname);   
+    mesh_getEdge2no(H->nelem, H->elem, &H->nedges, &H->edge2no);
+    H->fixed = mesh_getFixed(H->ncoord, H->bdry, H->nbdry, &H->nfixed);
+    
+    // Refine Mesh
+    for (int k = 0; k<norefine; k++){
+        M = mesh_refine(H);
+        mesh_getEdge2no(M->nelem, M->elem, &M->nedges, &M->edge2no);
+        M->fixed = mesh_getFixed(M->ncoord, M->bdry, M->nbdry, &M->nfixed);
+        H = mesh_free(H);
+        H = M;
+    }
+    return(M);
+}
+
+
+/*
+#include "hpc.h"
+
+// Load Mesh from file and refine norefine times
+mesh *get_refined_mesh(int norefine){
+
+    // Load and initialize Mesh
     mesh **M;
     M = malloc ( (norefine+1) * sizeof(mesh));
     char *fname = "../code_material/Problem/problem1";
@@ -19,4 +46,4 @@ mesh *get_refined_mesh(int norefine){
         free(M[k]);
     }
     return(M[norefine]);
-}
+}*/
