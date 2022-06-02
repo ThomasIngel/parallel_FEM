@@ -98,14 +98,17 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm);
 double* get_local_ddot(double* m_i, double* r_i, index nloc, double* local_ddot);
 double ddot_parallel(double* m_i, double* r_i, index nloc, MPI_Comm comm);
 
+// Serielle Solver
 void cg_seriell(const sed *A, const double *b, double *u, double tol);
+void omega_jacobi_seriell(size_t n,const sed *A, const double *b, double *u, double omega, double tol);
 
-// CG parallel
-void cg_parallel(const sed *A, const double *b, double *u, double tol, 
-		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm);
+// Parallele Solver
 index sed_spmv_adapt(const sed *A, const double *x, double *y, double alpha);
-
-// OMEGA JACOBI parallel
+void cg_parallel(const sed *A, const double *b, double *u, double tol, double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm);
 void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm);
+
+// Dirichlet
+void inc_dir_r(double* r, const index* dir_ind, const size_t n_dir);
+void inc_dir_u(double* u, const double* dir, const index* dir_ind, const size_t n_dir);
 
 #endif

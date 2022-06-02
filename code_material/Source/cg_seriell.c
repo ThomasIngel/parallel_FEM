@@ -4,8 +4,7 @@
 #include "blas_level1.h"
 #include "mesh_trans.h"
 
-void
-cg_seriell(const sed *A, const double *b, double *u, double tol) {
+void cg_seriell(const sed *A, const double *b, double *u, double tol) {
         // A   - stiffness matrix (sed Format!)
         // b   - righthand side
         // u   - inital guess for solution
@@ -16,10 +15,8 @@ cg_seriell(const sed *A, const double *b, double *u, double tol) {
         double r[n];
         blasl1_dcopy(b,r,n,1.0);         //kopiert b in r (also r=b)
 
-
         // r = b - A*u    r = r-A*u
-        /*TestBeta: sed_spmv_adapt(A,u,r,-1.0,1);             //Ergebnis steht in r */
-        sed_spmv_adapt(A,u,r,-1.0);
+        sed_spmv_adapt(A,u,r,-1.0);                           //Ergebnis steht in r */
 
         // sigma = r'*r (Skalarprodukt)
         double sigma_0 = blasl1_ddot(r,r, (size_t) n);
@@ -28,7 +25,6 @@ cg_seriell(const sed *A, const double *b, double *u, double tol) {
         // d = r
         double d[n];
         blasl1_dcopy(r,d,n,1.0);
-
 
         // Speicher allokieren für ad
         double *ad = calloc(n, sizeof(double));         // ad mit 0en initiieren calloc
@@ -69,7 +65,6 @@ cg_seriell(const sed *A, const double *b, double *u, double tol) {
 
                 // sigma = sigma_neu
                 sigma = sigma_neu;
-                /* free(ad); */
 
                 printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
