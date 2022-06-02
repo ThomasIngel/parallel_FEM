@@ -112,4 +112,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
 void inc_dir_r(double* r, const index* dir_ind, const size_t n_dir);
 void inc_dir_u(double* u, const double* dir, const index* dir_ind, const size_t n_dir);
 
+void get_dirichlet(mesh_trans* mesh_loc, double (*f_dir)(double *), 
+		double* dir);
+
 #endif
