@@ -1,7 +1,5 @@
 // omega Jacobi algorithm parallel
 
-// TODO: Zeile 26, 46, 51, 79, 84 überprüfen ob die Funktionen richtig verwendet wurden :)
-
 #include "hpc.h"
 #include "mesh_trans.h"
 #include <mpi.h>
@@ -43,7 +41,6 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // accumulated version of the diagonal
     // P is the amount of processors on which we split our problem
     // C is an incidence matrix
-    // TODO: ist das so korrekt?
     double diag_buff[n];
     accum_vec(mesh_loc, diag_inv, diag_buff, comm);
     
@@ -67,11 +64,10 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // C is an incidence matrix
     double w[n];
     accum_vec(mesh_loc, r, w, comm);
-    // TODO: ist das so richtig?
 
     // Alg. 6.6, line 7: sigma := sigma_0 := <w,r>
     // computing the scalar product of w and r
-    double sigma_0 = ddot_parallel(w,r,n,comm);       // richtig so???
+    double sigma_0 = ddot_parallel(w,r,n,comm);
     double sigma = sigma_0;
 
     // initializing the loop variable
@@ -102,14 +98,10 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         // P is the amount of processors on which we split our problem
         // C is an incidence matrix
         accum_vec(mesh_loc, r, w, comm);
-
-        // TODO: ist das so richtig?
-
+     
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
-        // computing the scalar product of w and r
-        
-        sigma = ddot_parallel(w,r,n,comm);          // richtig so????
-        if(k >1) break;
+        // computing the scalar product of w and r   
+        sigma = ddot_parallel(w,r,n,comm);
         // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
     } while (sqrt(sigma) > tol);
