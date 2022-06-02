@@ -138,6 +138,11 @@ int main(int argc, char *argv[]) {
   for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",u[i]);
   printf("\n");
 
+/*
+  double* u_loc = calloc(ncoords, sizeof(double));
+  make_global(mesh_loc-> c, u, u_loc, mesh_loc->ncoord_loc);
+  accum_result(u_loc, ncoords, myid, numprocs, MPI_COMM_WORLD);*/
+  /*
   double vec_loc[ncoords];
   double accum[ncoords];
   MPI_Reduce(
@@ -147,12 +152,14 @@ int main(int argc, char *argv[]) {
     MPI_DOUBLE,
     MPI_SUM,
     0,
-    MPI_COMM_WORLD);
+    MPI_COMM_WORLD);*/
+
+
 
   if(myid == 0){
     sleep(1);
     printf("\nProcessor %d globales Ergebnis: ", myid);
-    for(i=0;i<ncoords;i++) printf("%f ",accum[i]);
+    for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
   }
 
