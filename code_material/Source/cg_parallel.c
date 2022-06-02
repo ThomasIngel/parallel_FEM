@@ -28,8 +28,8 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
         index n = A->n ;                                //Matrix Dim
         
-        // incoporate dirichlet bcs in u0
-        inc_dir_u(u, dir, fixed, nfixed);
+        // set nodes at dirichlet to 0 because of homogenization
+        inc_dir_r(u, fixed, nfixed);
 
         double r[n];
         blasl1_dcopy(b, r, n, 1.0);                     //kopiert b in r (also r=b)
@@ -78,6 +78,9 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
                 // Update: u = u + alpha*d
                 blasl1_daxpy(u, d, n, alpha, 1.0);
+                
+				// set dirichlet nodes to 0
+				inc_dir_r(u, fixed, nfixed);
 
                 // r = r - alpha*ad
                 blasl1_daxpy(r, ad, n, -alpha, 1.0);
@@ -102,4 +105,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         } while (sqrt(sigma) > tol);
 
         free(ad);
+        
+        // write dirichlet data at right position in solution vector
+        inc_dir_u(u, dir, fixed, nfixed);
 }

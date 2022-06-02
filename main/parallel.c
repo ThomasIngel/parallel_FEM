@@ -28,7 +28,7 @@ double g_Neu( double x[2], index typ )
 
 double u_D( double x[2])
 {
-  return ( 0.0 );
+  return ( 2.0 );
   // return ( x[0] * x[1] );
 }
 
@@ -122,6 +122,14 @@ int main(int argc, char *argv[]) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   double* u = calloc(mesh_loc->ncoord_loc, sizeof(double));
+  
+  // homogenitize rhs
+  double dir_val[mesh_loc->nfixed_loc];
+  get_dirichlet(mesh_loc, u_D, dir_val);
+  
+  inc_dir_u(u, dir_val, mesh_loc->fixed_loc, mesh_loc->nfixed_loc);
+  
+  sed_spmv_adapt(S, u, b, -1.0);
   
   int change = 1;
   if(change==0){

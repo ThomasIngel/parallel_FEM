@@ -30,8 +30,8 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
 	
     double *Ax = A->x; // data of A
     
-    // incoporate dirichlet in u0
-    inc_dir_u(u, dir, fixed, nfixed);
+    // dirichlet nodes 0 because of homogenization
+    inc_dir_r(u, fixed, nfixed);
 
     // Alg. 6.6, line 1: d := diag(A)
     double diag_inv[n];
@@ -85,6 +85,9 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         }        
         blasl1_daxpy(u,w,n,omega,1.0); // u <- u + w * omega
 
+		// dirichlet nodes 0 
+		inc_dir_r(u, fixed, nfixed);
+
         // Alg. 6.6, line 12: r := b - A * u
         // calculating the residuum locally
         blasl1_dcopy(b,r,(index) n,1.);  //copy b in r (r=b)
@@ -105,6 +108,9 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
     } while (sqrt(sigma) > tol);
+    
+    // write dirichlet data in solution vector
+    inc_dir_u(u, dir, fixed, nfixed);
     /*index myid2;
     MPI_Comm_rank(comm,&myid2);
     sleep(myid2);
