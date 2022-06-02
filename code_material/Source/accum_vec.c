@@ -3,55 +3,22 @@
 #include <mpi.h>
 #include <unistd.h>
 
-
-void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_Comm comm){/*
-// u_loc hat die globalen Dimensionen
-  MPI_Request request[numprocs+1];
-  if(!myid == 0){
+void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_Comm comm){
+  // u_loc hat die globalen Dimensionen
+  if(!(myid == 0)){
     // SEND Ergebnisse an rank 0
-    printf("\nPROCESSOR %d sendet!",myid);
-    MPI_Isend(u_loc,ncoords,MPI_DOUBLE,0,0,comm,&request[myid]);
-    // MPI_Send(u_loc, ncoords, MPI_DOUBLE, 0, 0, comm);
-  }else{
+    MPI_Send(u_loc, ncoords, MPI_DOUBLE, 0, myid, comm);
+  }
+  // MPI_Barrier(comm);
+  if(myid==0){
     bool done[ncoords];
     for(int i=0;i<ncoords;i++){
       done[i] = false;
     }
     double u_buff[ncoords];
-    // RECV Ergebnisse und füge zu einem zusammen
     for(int i=1;i<numprocs;i++){
-      printf("\nWAIT FOR %d",i);
-      MPI_Wait(&request[i], MPI_STATUS_IGNORE);
-    }
-    for(int i=1;i<numprocs;i++){
-      printf("\nPROCESSOR %d received von %d!",myid,i);
-      MPI_Recv(u_buff, ncoords, MPI_DOUBLE, i, MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
-      for(int k=0;i<ncoords;k++){
-        if(!done[k]){
-          if(u_buff[k] != 0){
-            u_loc[k] = u_buff[k];
-            done[k] = 1;
-          }
-        }
-      }
-    }
-  }*/
-}
-
-/*
-void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_Comm comm){
-// u_loc hat die globalen Dimensionen
-  if(!myid == 0){
-    // SEND Ergebnisse an rank 0
-    printf("\nPROCESSOR %d sendet!",myid);
-    // MPI_Isend(u_loc,ncoords,MPI_DOUBLE,0,0,comm,&request[myid]);
-    MPI_Send(u_loc, ncoords, MPI_DOUBLE, 0, myid, comm);
-  }else{
-    double u_buff[ncoords];
-    for(int i=1;i<numprocs;i++){
-      printf("\nPROCESSOR %d received von %d!",myid,i);
       MPI_Recv(u_buff, ncoords, MPI_DOUBLE, i, i, comm, MPI_STATUS_IGNORE);
-      for(int k=0;i<ncoords;k++){
+      for(int k=0;k<ncoords;k++){
         if(!done[k]){
           if(u_buff[k] != 0){
             u_loc[k] = u_buff[k];
@@ -63,7 +30,7 @@ void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_
   }
 }
 
-*/
+
 void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) {
   
   MPI_Barrier(comm);
