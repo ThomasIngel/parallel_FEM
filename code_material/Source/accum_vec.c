@@ -123,8 +123,7 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
   if(!mesh_loc->black){           // REDS RECEIVEN DATA VON ALLEN BLACK NACHBARGEBIETEN
     for(i=0;i<4;i++){
       if(mesh_loc->neighbours[i] > -1){
-        length = 2 + mesh_loc->n_single_bdry[i];
-        // double* data =  (double*) malloc(length*sizeof(double));      
+        length = 2 + mesh_loc->n_single_bdry[i];    
         // DATA RECEIVE [CROSSP CROSSP (EDGENODE) (...)]
         // CROSSPOINTS VON LINKS NACH RECHTS ODER OBEN NACH UNTEN
         MPI_Recv(data, length, MPI_DOUBLE, mesh_loc->neighbours[i], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
@@ -158,7 +157,6 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
     for(i=0;i<4;i++){
       if(mesh_loc->neighbours[i] > -1){ 
         length = 2 + mesh_loc->n_single_bdry[i];
-        // double* data = (double*)  malloc(length*sizeof(double));
         if(i==0){                 // AN SOUTH
           // CROSSPOINTS
           data[0] = m_i[0];
