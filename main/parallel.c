@@ -96,9 +96,7 @@ int main(int argc, char *argv[]) {
   if (myid == 0){
     printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
 
-    // HIER ERROR; WENN DIESE ZEILE DRIN IST!!!!!!!!!
-    t0 = 3;
-    // !!!!!!!!!!!!!!!!!!!!!!!!
+    t0 = walltime();
 
     // CREATE GLOBAL MESH
     mesh* H = get_refined_mesh(norefine);
