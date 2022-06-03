@@ -88,10 +88,17 @@ int main(int argc, char *argv[]) {
   double tol = 1e-10;
   mesh_trans **metra;
   index anz_dom = numprocs;
-  index ncoords;  
+  index ncoords;
+
+  double t0;
+  double t1;
 
   if (myid == 0){
     printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
+
+    // HIER ERROR; WENN DIESE ZEILE DRIN IST!!!!!!!!!
+    // t0 = 3;
+    // !!!!!!!!!!!!!!!!!!!!!!!!
 
     // CREATE GLOBAL MESH
     mesh* H = get_refined_mesh(norefine);
@@ -161,7 +168,12 @@ int main(int argc, char *argv[]) {
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
   }
-
+  
+  free_mesh_trans(mesh_loc);
+  sed_free(S);
+  free(b);
+  free(u);
+  free(u_loc);
   MPI_Finalize();
   return 0;
 }
