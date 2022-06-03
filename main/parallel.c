@@ -166,6 +166,10 @@ int main(int argc, char *argv[]) {
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
 
+    // ERROR; WENN DIE ZEILE HIER DRIN IST !!!!!!!!
+    // double t1 = walltime() - t0;
+    // !!!!!!!!!!!!!!!!!!!
+
     for(i=0;i<anz_dom;i++){
       free_mesh_trans(metra[i]);
     }
