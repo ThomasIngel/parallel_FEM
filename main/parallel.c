@@ -22,6 +22,11 @@ double walltime() {
     return (double) times(&timebuf) / ticks_per_second;
 }
 
+void print_time(double t0){
+  double t1 = walltime() - t0;
+  printf("\nTIME PASSED: %f",t1);
+}
+
 double* make_global(index* c,double* r,double* rhs_loc,index nlocal){
   for(int i=0;i<nlocal;i++){
     rhs_loc[c[i]] = r[i];
@@ -91,7 +96,6 @@ int main(int argc, char *argv[]) {
   index ncoords;
 
   double t0;
-  double t1;
 
   if (myid == 0){
     printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
@@ -148,6 +152,8 @@ int main(int argc, char *argv[]) {
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
+  sed_free(S);
+  free(b);
   
   /*
   sleep(myid);
@@ -158,17 +164,17 @@ int main(int argc, char *argv[]) {
   // Globalen Lösungsvektor auf rank 0 zusammenstellen
   double* u_loc = calloc(ncoords, sizeof(double));
   make_global(mesh_loc-> c, u, u_loc, mesh_loc->ncoord_loc);
+  free(u);
   accum_result(u_loc, ncoords, myid, numprocs, MPI_COMM_WORLD);
   
   // Finale globale Lösung printen
   if(myid == 0){
+
+    print_time(t0);
+
     printf("\nProcessor %d globales Ergebnis: ", myid);
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
-
-    // ERROR; WENN DIE ZEILE HIER DRIN IST !!!!!!!!
-    // double t1 = walltime() - t0;
-    // !!!!!!!!!!!!!!!!!!!
 
     for(i=0;i<anz_dom;i++){
       free_mesh_trans(metra[i]);
@@ -176,9 +182,6 @@ int main(int argc, char *argv[]) {
     free(metra);
   }
   
-  sed_free(S);
-  free(b);
-  free(u);
   free(u_loc);
   MPI_Finalize();
   return 0;
