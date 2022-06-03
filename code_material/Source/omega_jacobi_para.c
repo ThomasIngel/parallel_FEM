@@ -1,7 +1,5 @@
 // omega Jacobi algorithm parallel
 
-// TODO: Zeile 26, 46, 51, 79, 84 überprüfen ob die Funktionen richtig verwendet wurden :)
-
 #include "hpc.h"
 #include "mesh_trans.h"
 #include <mpi.h>
@@ -32,8 +30,8 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
 	
     double *Ax = A->x; // data of A
     
-    // incoporate dirichlet in u0
-    inc_dir_u(u, dir, fixed, nfixed);
+    // dirichlet nodes 0 because of homogenization
+    inc_dir_r(u, fixed, nfixed);
 
     // Alg. 6.6, line 1: d := diag(A)
     double diag_inv[n];
@@ -43,7 +41,6 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // accumulated version of the diagonal
     // P is the amount of processors on which we split our problem
     // C is an incidence matrix
-    // TODO: ist das so korrekt?
     double diag_buff[n];
     accum_vec(mesh_loc, diag_inv, diag_buff, comm);
     
@@ -67,11 +64,10 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // C is an incidence matrix
     double w[n];
     accum_vec(mesh_loc, r, w, comm);
-    // TODO: ist das so richtig?
 
     // Alg. 6.6, line 7: sigma := sigma_0 := <w,r>
     // computing the scalar product of w and r
-    double sigma_0 = ddot_parallel(w,r,n,comm);       // richtig so???
+    double sigma_0 = ddot_parallel(w,r,n,comm);
     double sigma = sigma_0;
 
     // initializing the loop variable
@@ -89,6 +85,9 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         }        
         blasl1_daxpy(u,w,n,omega,1.0); // u <- u + w * omega
 
+		// dirichlet nodes 0 
+		inc_dir_r(u, fixed, nfixed);
+
         // Alg. 6.6, line 12: r := b - A * u
         // calculating the residuum locally
         blasl1_dcopy(b,r,(index) n,1.);  //copy b in r (r=b)
@@ -102,17 +101,16 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         // P is the amount of processors on which we split our problem
         // C is an incidence matrix
         accum_vec(mesh_loc, r, w, comm);
-
-        // TODO: ist das so richtig?
-
+     
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
-        // computing the scalar product of w and r
-        
-        sigma = ddot_parallel(w,r,n,comm);          // richtig so????
-        if(k >1) break;
+        // computing the scalar product of w and r   
+        sigma = ddot_parallel(w,r,n,comm);
         // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
     } while (sqrt(sigma) > tol);
+    
+    // write dirichlet data in solution vector
+    inc_dir_u(u, dir, fixed, nfixed);
     /*index myid2;
     MPI_Comm_rank(comm,&myid2);
     sleep(myid2);

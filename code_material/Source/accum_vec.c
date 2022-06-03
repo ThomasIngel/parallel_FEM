@@ -247,6 +247,5 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
       // ----------------------------------------
     }
   }
-  
   MPI_Barrier(comm);
 }

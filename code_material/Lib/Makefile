@@ -76,7 +76,8 @@ HPC = \
  cg_seriell.o \
  blas_level1.o \
  omega_jacobi.o \
- inc_dir.o
+ inc_dir.o \
+ get_dirichlet.o
 
 
 
@@ -99,4 +100,3 @@ clean:
 
 purge: clean
 	- $(RM) *.a *.obj *.dll *.dylib *.so *.so.*
-
