@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
 
     // HIER ERROR; WENN DIESE ZEILE DRIN IST!!!!!!!!!
-    // t0 = 3;
+    t0 = 3;
     // !!!!!!!!!!!!!!!!!!!!!!!!
 
     // CREATE GLOBAL MESH
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     metra = malloc ( (anz_dom) * sizeof(mesh_trans));
 
-    for(size_t i=0;i<anz_dom;i++){
+    for(i=0;i<anz_dom;i++){
       metra[i]=alloc_mesh_trans(anz_dom,ncoords);
     }
 
@@ -167,6 +167,8 @@ int main(int argc, char *argv[]) {
     printf("\nProcessor %d globales Ergebnis: ", myid);
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
+
+    free(metra);
   }
   
   free_mesh_trans(mesh_loc);
