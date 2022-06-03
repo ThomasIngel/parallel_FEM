@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
   if (myid == 0){
     printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
 
+    // START-TIME
     t0 = walltime();
 
     // CREATE GLOBAL MESH
@@ -152,6 +153,11 @@ int main(int argc, char *argv[]) {
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
+
+  // PRINT TIME
+  if(myid==0){
+    print_time(t0);
+  }
   sed_free(S);
   free(b);
   
@@ -169,9 +175,6 @@ int main(int argc, char *argv[]) {
   
   // Finale globale Lösung printen
   if(myid == 0){
-
-    print_time(t0);
-
     printf("\nProcessor %d globales Ergebnis: ", myid);
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
