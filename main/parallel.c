@@ -3,6 +3,25 @@
 #include <mpi.h>
 #include <unistd.h>
 
+// PARAMETER INPUT
+#include <errno.h>  // for errno
+#include <limits.h> // for INT_MIN and INT_MAX
+#include <string.h>  // for strlen
+
+// WALLTIME
+#include <sys/times.h> 
+
+/* return real time in seconds since start of the process */ 
+double walltime() { 
+    static clock_t ticks_per_second = 0; 
+    if (!ticks_per_second) { 
+        ticks_per_second = sysconf(_SC_CLK_TCK); 
+    }
+    struct tms timebuf;
+    /* times returns the number of real time ticks passed since start */
+    return (double) times(&timebuf) / ticks_per_second;
+}
+
 double* make_global(index* c,double* r,double* rhs_loc,index nlocal){
   for(int i=0;i<nlocal;i++){
     rhs_loc[c[i]] = r[i];
@@ -37,6 +56,27 @@ int main(int argc, char *argv[]) {
   int numprocs;
 	int myid;
   int i;
+
+  // GET NOREFINE FROM INPUT PARAMETER
+  if (strlen(argv[1]) == 0) {
+  printf("ERROR WITH REFINEMENT INPUT! ABORTING...\n");
+      return 1; // empty string
+  }
+  char* p;
+  errno = 0; // not 'int errno', because the '#include' already defined it
+  long arg = strtol(argv[1], &p, 10);
+  if (*p != '\0' || errno != 0) {
+  printf("ERROR WITH REFINEMENT INPUT! ABORTING...\n");
+      return 1; // In main(), returning non-zero means failure
+  }
+
+  if (arg < INT_MIN || arg > INT_MAX) {
+  printf("ERROR WITH REFINEMENT INPUT! ABORTING...\n");
+      return 1;
+  }
+  int norefine = arg;
+
+  // INITIALIZE MPI
   const int root=0;
 	MPI_Status stat;
 
@@ -51,38 +91,11 @@ int main(int argc, char *argv[]) {
   index ncoords;  
 
   if (myid == 0){
-    mesh* H = get_refined_mesh(1);
-    ncoords = H->ncoord;
-    /*
-    sed* A = sed_nz_pattern(H);
-        
-    // construct my stiffnes matrix and the reference one
-    mesh_stima_global(H, A);
-    
-    size_t test_n = A->n;
-    // my RHS and the reference one
-    double* b_glob = calloc(test_n, sizeof(double));
-    double* u_glob = calloc(test_n, sizeof(double));
-    
-    mesh_RHS(H, b_glob, F_vol, g_Neu);
-	
-    // TODO: Solve LSE
-    omega_jacobi_seriell(test_n,A,b_glob,u_glob,omega,tol);
-    // cg_seriell(A, b_glob, u_glob, 1e-6);  
-    
-    printf("\nLÖSUNG SERIELL: ", myid);
-    for(i=0;i<test_n;i++){
-      printf("%f ",u_glob[i]);
-    }  
-    
-    free(b_glob);
-    free(u_glob);
-    */
+    printf("Starting program with %d mesh refinement(s) on %d processes!\n", norefine,numprocs);
 
-    /*printf("\nProcessor %d rhs full mesh:\n", myid);
-    for(i=0;i<ncoords;i++){
-      printf("%lg\n",b1[i]);
-    }*/
+    // CREATE GLOBAL MESH
+    mesh* H = get_refined_mesh(norefine);
+    ncoords = H->ncoord;
 
     metra = malloc ( (anz_dom) * sizeof(mesh_trans));
 
@@ -90,40 +103,29 @@ int main(int argc, char *argv[]) {
       metra[i]=alloc_mesh_trans(anz_dom,ncoords);
     }
 
+    // SPLIT MESH
     meshsplit(H, metra, anz_dom);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Bcast(&ncoords,1,MPI_INT,0,MPI_COMM_WORLD);
 
+  // SCATTER MESH
   mesh_trans* mesh_loc =  scatter_meshes(metra,MPI_COMM_WORLD,anz_dom,ncoords);
+
+  // LOCAL S
   sed* S;
   S = malloc (sizeof(sed));
   S = sed_sm_build(mesh_loc);
+
+  // LOCAL RHS
   double* b = calloc(mesh_loc->ncoord_loc, sizeof(double));
   mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
-
-  sleep(myid);
-  /*
-  printf("\nProcessor %d S: ", myid);
-  sed_print(S,1);*/
-    
-  printf("\nProcessor %d rhs: ", myid);
-  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
-  printf("\nProcessor %d c: ", myid);
-  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%d ",mesh_loc->c[i]);
-  // printf("\nProcessor %d neighbours: ", myid);
-  // for(i=0;i<4;i++) printf("%d ",mesh_loc->neighbours[i]);
-  // printf("\nProcessor %d nedgenodes: %d", myid,mesh_loc->nedgenodes);
-  // printf("\nProcessor %d n_single_bdry: ", myid);
-  // for(i=0;i<4;i++) printf("%d ",mesh_loc->n_single_bdry[i]);
-  // printf("\nProcessor %d black: %d", myid,mesh_loc->black);
-  printf("\n");
   
   MPI_Barrier(MPI_COMM_WORLD);
 
   double* u = calloc(mesh_loc->ncoord_loc, sizeof(double));
   
-  // homogenitize rhs
+  // HOMOGENITIZE RHS
   double dir_val[mesh_loc->nfixed_loc];
   get_dirichlet(mesh_loc, u_D, dir_val);
   
@@ -131,6 +133,7 @@ int main(int argc, char *argv[]) {
   
   sed_spmv_adapt(S, u, b, -1.0);
   
+  // SOLVE PROBLEM
   int change = 1;
   if(change==0){
     omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, u_D, mesh_loc, MPI_COMM_WORLD);
@@ -141,10 +144,11 @@ int main(int argc, char *argv[]) {
   
   MPI_Barrier(MPI_COMM_WORLD);
   
+  /*
   sleep(myid);
   printf("\nProcessor %d lokales Ergebnis: ", myid);
   for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",u[i]);
-  printf("\n");
+  printf("\n");*/
 
   // Globalen Lösungsvektor auf rank 0 zusammenstellen
   double* u_loc = calloc(ncoords, sizeof(double));
