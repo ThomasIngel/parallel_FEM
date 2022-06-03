@@ -166,10 +166,12 @@ int main(int argc, char *argv[]) {
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
     printf("\n"); 
 
+    for(i=0;i<anz_dom;i++){
+      free_mesh_trans(metra[i]);
+    }
     free(metra);
   }
   
-  free_mesh_trans(mesh_loc);
   sed_free(S);
   free(b);
   free(u);
