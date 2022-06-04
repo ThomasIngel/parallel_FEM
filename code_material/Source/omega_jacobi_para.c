@@ -46,7 +46,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     
     // Alg. 6.6, line 3: d_inv := {1/d_i}, i = 1,...,n
     for(index i = 0; i < n; i++){
-        diag_inv[i] = 1 / diag_buff[i]; // compute D^-1 and save it in diag_inv
+        diag_inv[i] = omega / diag_buff[i]; // compute D^-1 and save it in diag_inv
     }
 
     // Alg. 6.6, line 5: r := b - A * u
@@ -81,9 +81,9 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         // Alg. 6.6, line 11: u_k := u_k-1 + omega * diag(A)^-1 .* w
         // .* is an element-wise multiplication
         for(index i = 0; i < n; i++){
-            w[i] = diag_inv[i] * w[i]; // compute diag_inv .* w and save it in w
+            u[i] += diag_inv[i] * w[i]; // compute diag_inv .* w and save it in w
         }        
-        blasl1_daxpy(u,w,n,omega,1.0); // u <- u + w * omega
+        //blasl1_daxpy(u,w,n,omega,1.0); // u <- u + w * omega
 
 		// dirichlet nodes 0 
 		inc_dir_r(u, fixed, nfixed);
