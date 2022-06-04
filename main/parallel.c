@@ -9,22 +9,23 @@
 #include <string.h>  // for strlen
 
 // WALLTIME
-#include <sys/times.h> 
+#include <sys/times.h>
 
-/* return real time in seconds since start of the process */ 
-double walltime() { 
-    static clock_t ticks_per_second = 0; 
-    if (!ticks_per_second) { 
-        ticks_per_second = sysconf(_SC_CLK_TCK); 
+/* return real time in seconds since start of the process */
+double walltime() {
+    static clock_t ticks_per_second = 0;
+    if (!ticks_per_second) {
+        ticks_per_second = sysconf(_SC_CLK_TCK);
     }
     struct tms timebuf;
     /* times returns the number of real time ticks passed since start */
     return (double) times(&timebuf) / ticks_per_second;
 }
 
-void print_time(double t0){
+void print_time(double t0, index myid){
   double t1 = walltime() - t0;
-  printf("\nTIME PASSED: %f",t1);
+  printf("Processor %d\t TIME PASSED: %f\n", myid, t1);
+  fflush(stdout);
 }
 
 double* make_global(index* c,double* r,double* rhs_loc,index nlocal){
@@ -59,7 +60,7 @@ double u_D( double x[2])
 int main(int argc, char *argv[]) {
 
   int numprocs;
-	int myid;
+        int myid;
   int i;
 
   // GET NOREFINE FROM INPUT PARAMETER
@@ -83,12 +84,12 @@ int main(int argc, char *argv[]) {
 
   // INITIALIZE MPI
   const int root=0;
-	MPI_Status stat;
+        MPI_Status stat;
 
   MPI_Init(&argc,&argv);
-	MPI_Comm_size(MPI_COMM_WORLD,&numprocs); /* find out how big the SPMD world is */
-	MPI_Comm_rank(MPI_COMM_WORLD,&myid); /* and this processes' rank is */
- 
+        MPI_Comm_size(MPI_COMM_WORLD,&numprocs); /* find out how big the SPMD world is */
+        MPI_Comm_rank(MPI_COMM_WORLD,&myid); /* and this processes' rank is */
+
   double omega = 2.0/3.0;
   double tol = 1e-10;
   mesh_trans **metra;
@@ -106,6 +107,8 @@ int main(int argc, char *argv[]) {
     // CREATE GLOBAL MESH
     mesh* H = get_refined_mesh(norefine);
     ncoords = H->ncoord;
+    printf("DOF: %d\n", ncoords);
+    fflush(stdout);
 
     metra = malloc ( (anz_dom) * sizeof(mesh_trans));
 
@@ -115,14 +118,25 @@ int main(int argc, char *argv[]) {
 
     // SPLIT MESH
     meshsplit(H, metra, anz_dom);
+    mesh_free(H);
   }
   MPI_Barrier(MPI_COMM_WORLD);
+  // PRINT TIME
+  if(myid==0){
+    printf("Time to build & split Mesh:\n");
+    print_time(t0, myid);
+    t0 = walltime();
+  }
   MPI_Bcast(&ncoords,1,MPI_INT,0,MPI_COMM_WORLD);
 
   // SCATTER MESH
   mesh_trans* mesh_loc =  scatter_meshes(metra,MPI_COMM_WORLD,anz_dom,ncoords);
-
-  // LOCAL S
+  if(myid==0){
+    printf("Time to scatter Mesh:\n");
+    print_time(t0, myid);
+    t0 = walltime();
+  }
+   // LOCAL S
   sed* S;
   S = malloc (sizeof(sed));
   S = sed_sm_build(mesh_loc);
@@ -130,19 +144,32 @@ int main(int argc, char *argv[]) {
   // LOCAL RHS
   double* b = calloc(mesh_loc->ncoord_loc, sizeof(double));
   mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
-  
+
   MPI_Barrier(MPI_COMM_WORLD);
+  if(myid==0){
+    printf("Time to build stiffness matrix & righthandside:\n");
+    print_time(t0, myid);
+    t0 = walltime();
+  }
 
   double* u = calloc(mesh_loc->ncoord_loc, sizeof(double));
-  
+
   // HOMOGENITIZE RHS
   double dir_val[mesh_loc->nfixed_loc];
   get_dirichlet(mesh_loc, u_D, dir_val);
-  
+
   inc_dir_u(u, dir_val, mesh_loc->fixed_loc, mesh_loc->nfixed_loc);
-  
+
   sed_spmv_adapt(S, u, b, -1.0);
-  
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  // PRINT TIME
+  if(myid==0){
+    printf("Time to assemble LSE:\n");
+    print_time(t0, myid);
+  }
+
+  t0 = walltime();
   // SOLVE PROBLEM
   int change = 1;
   if(change==0){
@@ -151,16 +178,19 @@ int main(int argc, char *argv[]) {
   if(change==1){
     cg_parallel(S, b, u, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }
-  
-  MPI_Barrier(MPI_COMM_WORLD);
 
+  // Zeit pro Prozessor
+  print_time(t0, myid);
+
+  MPI_Barrier(MPI_COMM_WORLD);
   // PRINT TIME
   if(myid==0){
-    print_time(t0);
+    printf("Time to solve LSE (CG):\n");
+    print_time(t0, myid);
   }
   sed_free(S);
   free(b);
-  
+
   /*
   sleep(myid);
   printf("\nProcessor %d lokales Ergebnis: ", myid);
@@ -172,23 +202,21 @@ int main(int argc, char *argv[]) {
   make_global(mesh_loc-> c, u, u_loc, mesh_loc->ncoord_loc);
   free(u);
   accum_result(u_loc, ncoords, myid, numprocs, MPI_COMM_WORLD);
-  
+
   // Finale globale Lösung printen
   if(myid == 0){
+/*
     printf("\nProcessor %d globales Ergebnis: ", myid);
     for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
-    printf("\n"); 
-
+    printf("\n");
+*/
     for(i=0;i<anz_dom;i++){
       free_mesh_trans(metra[i]);
     }
     free(metra);
   }
-  
+
   free(u_loc);
   MPI_Finalize();
   return 0;
 }
-  
-
-
