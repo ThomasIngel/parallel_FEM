@@ -108,20 +108,10 @@ int main(int argc, char *argv[]) {
   }
   MPI_Barrier(MPI_COMM_WORLD);
   // PRINT TIME
-  if(myid==0){
-    printf("Time to build & split Mesh:\n");
-    print_time(t0, myid);
-    t0 = walltime();
-  }
   MPI_Bcast(&ncoords,1,MPI_INT,0,MPI_COMM_WORLD);
 
   // SCATTER MESH
   mesh_trans* mesh_loc =  scatter_meshes(metra,MPI_COMM_WORLD,anz_dom,ncoords);
-  if(myid==0){
-    printf("Time to scatter Mesh:\n");
-    print_time(t0, myid);
-    t0 = walltime();
-  }
    // LOCAL S
   sed* S;
   S = malloc (sizeof(sed));
@@ -132,11 +122,6 @@ int main(int argc, char *argv[]) {
   mesh_trans_rhs(mesh_loc,b,F_vol, g_Neu);
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if(myid==0){
-    printf("Time to build stiffness matrix & righthandside:\n");
-    print_time(t0, myid);
-    t0 = walltime();
-  }
 
   double* u = calloc(mesh_loc->ncoord_loc, sizeof(double));
 
@@ -149,11 +134,6 @@ int main(int argc, char *argv[]) {
   sed_spmv_adapt(S, u, b, -1.0);
 
   MPI_Barrier(MPI_COMM_WORLD);
-  // PRINT TIME
-  if(myid==0){
-    printf("Time to assemble LSE:\n");
-    print_time(t0, myid);
-  }
 
   t0 = walltime();
   // SOLVE PROBLEM

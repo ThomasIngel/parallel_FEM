@@ -79,10 +79,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 		}
 
         index n = A->n ;                                //Matrix Dim
-
-        // SWITCH VON ACCUM ÜBER R0 (1) ODER RED/BLACK (0)
-        index r0 = 1;
-        
+      
         // set nodes at dirichlet to 0 because of homogenization
         inc_dir_r(u, fixed, nfixed);
 
@@ -95,30 +92,36 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
        	// residuum is 0 at dirichlet bcs
        	inc_dir_r(r, fixed, nfixed);
 
+
+
         // w = Akkumulation (Summe über Prozessoren)
-        double w[n];                                                            // Dimension??
+        double w1[n];                                                            // Dimension??
+        double w2[n];
         double t0 = walltime();
         double t1;
-        if(r0 == 1){
-            accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
-            t1 = walltime()-t0;
-            printf("PROCESS %d: %fs for rank0 Akkum\n",myid,t1);
-        }else{
-            accum_vec(mesh_loc, r, w, comm);
-            t1 = walltime()-t0;
-            printf("PROCESS %d: %fs for parallel Akkum\n",myid,t1);
-        }
+        double sigma1;
+        double sigma2;
 
-        // sigma = w'*r (Skalarprodukt)
-        double sigma_0;
+        MPI_Barrier(comm);
+        // Accum rank0
+        accum_vec_r0(mesh_loc->c,r,w1,n,mesh_loc->ncoord_glo);
+        t1 = walltime()-t0;
+        printf("PROCESS %d: %fs for rank0 Akkum\n",myid,t1);
+
         t0 = walltime();
-        if(r0 == 1){
-            sigma_0 = get_sigma(w,r,n);
-            t1 = walltime()-t0;
-            printf("PROCESS %d: %fs for rank0 ddot\n",myid,t1);
-        }else{
-            sigma_0 = ddot_parallel(w, r, n, comm);
-            t1 = walltime()-t0;
-            printf("PROCESS %d: %fs for parallel ddot\n",myid,t1);
-        }     
-}
+        sigma1 = get_sigma(w1,r,n);
+        t1 = walltime()-t0;
+        printf("PROCESS %d: %fs for rank0 ddot\n",myid,t1);
+        if(myid==0) printf("SIGMA RANK0 = %f\n", sigma1);  
+
+
+        // Accum parallel
+        MPI_Barrier(comm);
+        accum_vec(mesh_loc, r, w2, comm);
+        t1 = walltime()-t0;
+        printf("PROCESS %d: %fs for parallel Akkum\n",myid,t1);
+        sigma2 = ddot_parallel(w2, r, n, comm);
+        t1 = walltime()-t0;
+        printf("PROCESS %d: %fs for parallel ddot\n",myid,t1);
+        if(myid==0) printf("SIGMA PARALLEL = %f\n", sigma2); 
+}   
