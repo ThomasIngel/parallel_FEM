@@ -8,20 +8,6 @@
 #include <limits.h> // for INT_MIN and INT_MAX
 #include <string.h>  // for strlen
 
-// WALLTIME
-#include <sys/times.h>
-
-/* return real time in seconds since start of the process */
-double walltime() {
-    static clock_t ticks_per_second = 0;
-    if (!ticks_per_second) {
-        ticks_per_second = sysconf(_SC_CLK_TCK);
-    }
-    struct tms timebuf;
-    /* times returns the number of real time ticks passed since start */
-    return (double) times(&timebuf) / ticks_per_second;
-}
-
 void print_time(double t0, index myid){
   double t1 = walltime() - t0;
   printf("Processor %d\t TIME PASSED: %f\n", myid, t1);
@@ -171,7 +157,7 @@ int main(int argc, char *argv[]) {
 
   t0 = walltime();
   // SOLVE PROBLEM
-  int change = 1;
+  int change = 0;
   if(change==0){
     omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }

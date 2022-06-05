@@ -23,7 +23,7 @@ export MYAPP_FLAGS='1'
 #$ -pe mvapich 2
 #$ -l h_rt=00:05:00
 
-
+#$ -q xeon_e5-2630v3_2x8.q 
 #################################################################
 #################################################################
 # there shouldn't be a need to change anything below this line
