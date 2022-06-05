@@ -107,6 +107,8 @@ void hpc_prol_quad(double *x, double *y, index *elem, index nC, index nT, index 
 double kappa( double x[2], index typ );
 double F_vol( double x[2], index typ );
 
+double walltime();
+
 
 #define HPC_MAX(a,b) (((a) > (b)) ? (a) : (b))
 #define HPC_MIN(a,b) (((a) < (b)) ? (a) : (b))

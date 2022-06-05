@@ -61,7 +61,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         // u   - Part of the inital guess for the solution
         // tol - Toleranz (stopping criteria)
         
-        index myid;
+        int myid;
         MPI_Comm_rank(comm,&myid);
 
         // gather variables for readability
@@ -111,82 +111,14 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
         // sigma = w'*r (Skalarprodukt)
         double sigma_0;
+        t0 = walltime();
         if(r0 == 1){
             sigma_0 = get_sigma(w,r,n);
+            t1 = walltime()-t0;
+            printf("PROCESS %d: %fs for rank0 ddot\n",myid,t1);
         }else{
             sigma_0 = ddot_parallel(w, r, n, comm);
+            t1 = walltime()-t0;
+            printf("PROCESS %d: %fs for parallel ddot\n",myid,t1);
         }     
-
-        // printf("\nSIGMA_0 = %f", sigma_0);
-        double sigma = sigma_0;
-
-        // d = w
-        double d[n];
-        blasl1_dcopy(w, d, n, 1.0);
-
-        // Speicher allokieren für ad
-        double *ad = calloc(n, sizeof(double));         // ad mit 0en initiieren calloc
-        if (ad == NULL) {
-                printf("Error! memory not allocated.");
-                exit(0);
-        }
-
-        double sigma_neu;
-        size_t k = 0;
-        do {
-            k++;
-
-            // ad = A*d (damit nur 1x Matrixprodukt)
-            if (k>0) {                              // ad mit 0en initiieren
-                for (index i=0; i<n; i++) {
-                    ad[i] = 0;
-                }
-            }
-            // ad = A*d (damit nur 1x Matrixprodukt)
-            sed_spmv_adapt(A, d, ad, 1.0);
-
-            // alpha = sigma/(d*ad)
-            double dad = ddot_parallel(d, ad, n, comm);
-            double alpha = sigma / dad;
-
-            // Update: u = u + alpha*d
-            blasl1_daxpy(u, d, n, alpha, 1.0);
-            
-            // set dirichlet nodes to 0
-            inc_dir_r(u, fixed, nfixed);
-
-            // r = r - alpha*ad
-            blasl1_daxpy(r, ad, n, -alpha, 1.0);
-            
-            // residuum is 0 at dirichlet bcs
-            inc_dir_r(r, fixed, nfixed);
-
-            // w = Akkumulation (Summe über Prozessoren (C*r))
-            if(r0 == 1){
-                accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
-            }else{
-                accum_vec(mesh_loc, r, w, comm);
-            }
-
-            // sigma_neu = w' * r
-            if(r0 == 1){
-                sigma_neu = get_sigma(w,r,n);
-            }else{
-                sigma_neu = ddot_parallel(w,r,n,comm);
-            }         
-            
-            // d = (sigma_neu/sigma)*d + w
-            blasl1_daxpy(d, w, n, 1.0, sigma_neu / sigma);
-
-            // sigma = sigma_neu
-            sigma = sigma_neu;
-
-            // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
-
-        } while (sqrt(sigma) > tol);
-
-        free(ad);
-        
-        // write dirichlet data at right position in solution vector
-        inc_dir_u(u, dir, fixed, nfixed);
 }

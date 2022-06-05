@@ -8,20 +8,6 @@
 #include <limits.h> // for INT_MIN and INT_MAX
 #include <string.h>  // for strlen
 
-// WALLTIME
-#include <sys/times.h>
-
-/* return real time in seconds since start of the process */
-double walltime() {
-    static clock_t ticks_per_second = 0;
-    if (!ticks_per_second) {
-        ticks_per_second = sysconf(_SC_CLK_TCK);
-    }
-    struct tms timebuf;
-    /* times returns the number of real time ticks passed since start */
-    return (double) times(&timebuf) / ticks_per_second;
-}
-
 void print_time(double t0, index myid){
   double t1 = walltime() - t0;
   printf("Processor %d\t TIME PASSED: %f\n", myid, t1);
@@ -60,7 +46,7 @@ double u_D( double x[2])
 int main(int argc, char *argv[]) {
 
   int numprocs;
-        int myid;
+  int myid;
   int i;
 
   // GET NOREFINE FROM INPUT PARAMETER
@@ -179,44 +165,17 @@ int main(int argc, char *argv[]) {
     cg_parallel(S, b, u, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }
 
-  // Zeit pro Prozessor
-  print_time(t0, myid);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  // PRINT TIME
-  if(myid==0){
-    printf("Time to solve LSE (CG):\n");
-    print_time(t0, myid);
-  }
   sed_free(S);
   free(b);
 
-  /*
-  sleep(myid);
-  printf("\nProcessor %d lokales Ergebnis: ", myid);
-  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",u[i]);
-  printf("\n");*/
-
-  // Globalen Lösungsvektor auf rank 0 zusammenstellen
-  double* u_loc = calloc(ncoords, sizeof(double));
-  make_global(mesh_loc-> c, u, u_loc, mesh_loc->ncoord_loc);
-  free(u);
-  accum_result(u_loc, ncoords, myid, numprocs, MPI_COMM_WORLD);
-
   // Finale globale Lösung printen
   if(myid == 0){
-/*
-    printf("\nProcessor %d globales Ergebnis: ", myid);
-    for(i=0;i<ncoords;i++) printf("%f ",u_loc[i]);
-    printf("\n");
-*/
     for(i=0;i<anz_dom;i++){
       free_mesh_trans(metra[i]);
     }
     free(metra);
   }
 
-  free(u_loc);
   MPI_Finalize();
   return 0;
 }
