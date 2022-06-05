@@ -5,6 +5,55 @@
 #include <mpi.h>
 #include "blas_level1.h"
 
+double* make_global_r0(index* c,double* r,double* rhs_glob,index nlocal){
+  for(int i=0;i<nlocal;i++){
+    rhs_glob[c[i]] = r[i];
+  }
+  return rhs_glob;
+}
+
+void make_local_r0(index* c,double* rhs_glob,double* r,index nlocal){
+  for(int i=0;i<nlocal;i++){
+     r[i] = rhs_glob[c[i]];
+  }
+}
+
+void accum_vec_r0(index* c, double* vec, double* accum, index nloc, index n){
+    // Akkumuliert vec in accum (beide DIM nloc)
+    double* vec_loc = calloc(n,sizeof(double));
+    double accum_buff[n];
+    MPI_Allreduce(
+        make_global_r0(c,vec,vec_loc,nloc),
+        accum_buff,
+        n,
+        MPI_DOUBLE,
+        MPI_SUM,
+        MPI_COMM_WORLD);
+    free(vec_loc);
+    make_local_r0(c,accum_buff,accum,nloc);
+}
+
+double* ddot_local(double* w, double* r, index nloc, double* ddot_loc){
+  ddot_loc[0] = 0;
+  for(int i=0;i<nloc;i++){
+    ddot_loc[0] += w[i]*r[i];
+  }
+  return ddot_loc;
+}
+
+double get_sigma(double* w, double* r, index nloc){
+  double ddot[1];
+  double ddot_loc[1];
+  MPI_Allreduce(
+    ddot_local(w,r,nloc,ddot_loc),
+    ddot,
+    1,
+    MPI_DOUBLE,
+    MPI_SUM,
+    MPI_COMM_WORLD);
+  return ddot[0];
+}
+
 void cg_parallel(const sed *A, const double *b, double *u, double tol, 
 		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm) {
         // A   - Part of the stiffness matrix (sed Format!)
@@ -12,6 +61,9 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         // u   - Part of the inital guess for the solution
         // tol - Toleranz (stopping criteria)
         
+        index myid;
+        MPI_Comm_rank(comm,&myid);
+
         // gather variables for readability
 		index nfixed = mesh_loc->nfixed_loc;
 		index* fixed = mesh_loc->fixed_loc;
@@ -27,6 +79,9 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 		}
 
         index n = A->n ;                                //Matrix Dim
+
+        // SWITCH VON ACCUM ÜBER R0 (1) ODER RED/BLACK (0)
+        index r0 = 1;
         
         // set nodes at dirichlet to 0 because of homogenization
         inc_dir_r(u, fixed, nfixed);
@@ -42,10 +97,27 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
         // w = Akkumulation (Summe über Prozessoren)
         double w[n];                                                            // Dimension??
-        accum_vec(mesh_loc, r, w, comm);
+        double t0 = walltime();
+        double t1;
+        if(r0 == 1){
+            accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
+            t1 = walltime()-t0;
+            printf("PROCESS %d: %fs for rank0 Akkum\n",myid,t1);
+        }else{
+            accum_vec(mesh_loc, r, w, comm);
+            t1 = walltime()-t0;
+            printf("PROCESS %d: %fs for parallel Akkum\n",myid,t1);
+        }
 
         // sigma = w'*r (Skalarprodukt)
-        double sigma_0 = ddot_parallel(w, r, n, comm);
+        double sigma_0;
+        if(r0 == 1){
+            sigma_0 = get_sigma(w,r,n);
+        }else{
+            sigma_0 = ddot_parallel(w, r, n, comm);
+        }     
+
+        // printf("\nSIGMA_0 = %f", sigma_0);
         double sigma = sigma_0;
 
         // d = w
@@ -59,48 +131,57 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
                 exit(0);
         }
 
+        double sigma_neu;
         size_t k = 0;
-         do {
-                k++;
+        do {
+            k++;
 
-                // ad = A*d (damit nur 1x Matrixprodukt)
-                if (k>0) {                              // ad mit 0en initiieren
-                    for (index i=0; i<n; i++) {
-                        ad[i] = 0;
-                    }
+            // ad = A*d (damit nur 1x Matrixprodukt)
+            if (k>0) {                              // ad mit 0en initiieren
+                for (index i=0; i<n; i++) {
+                    ad[i] = 0;
                 }
-                // ad = A*d (damit nur 1x Matrixprodukt)
-                sed_spmv_adapt(A, d, ad, 1.0);
+            }
+            // ad = A*d (damit nur 1x Matrixprodukt)
+            sed_spmv_adapt(A, d, ad, 1.0);
 
-                // alpha = sigma/(d*ad)
-                double dad = ddot_parallel(d, ad, n, comm);
-                double alpha = sigma / dad;
+            // alpha = sigma/(d*ad)
+            double dad = ddot_parallel(d, ad, n, comm);
+            double alpha = sigma / dad;
 
-                // Update: u = u + alpha*d
-                blasl1_daxpy(u, d, n, alpha, 1.0);
-                
-				// set dirichlet nodes to 0
-				inc_dir_r(u, fixed, nfixed);
+            // Update: u = u + alpha*d
+            blasl1_daxpy(u, d, n, alpha, 1.0);
+            
+            // set dirichlet nodes to 0
+            inc_dir_r(u, fixed, nfixed);
 
-                // r = r - alpha*ad
-                blasl1_daxpy(r, ad, n, -alpha, 1.0);
-                
-                // residuum is 0 at dirichlet bcs
-                inc_dir_r(r, fixed, nfixed);
+            // r = r - alpha*ad
+            blasl1_daxpy(r, ad, n, -alpha, 1.0);
+            
+            // residuum is 0 at dirichlet bcs
+            inc_dir_r(r, fixed, nfixed);
 
-                // w = Akkumulation (Summe über Prozessoren (C*r))
-                accum_vec(mesh_loc, r, w, comm);              // Passt das so??
+            // w = Akkumulation (Summe über Prozessoren (C*r))
+            if(r0 == 1){
+                accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
+            }else{
+                accum_vec(mesh_loc, r, w, comm);
+            }
 
-                // sigma_neu = w' * r
-                double sigma_neu = ddot_parallel(w, r, n, comm);
+            // sigma_neu = w' * r
+            if(r0 == 1){
+                sigma_neu = get_sigma(w,r,n);
+            }else{
+                sigma_neu = ddot_parallel(w,r,n,comm);
+            }         
+            
+            // d = (sigma_neu/sigma)*d + w
+            blasl1_daxpy(d, w, n, 1.0, sigma_neu / sigma);
 
-                // d = (sigma_neu/sigma)*d + w
-                blasl1_daxpy(d, w, n, 1.0, sigma_neu / sigma);
+            // sigma = sigma_neu
+            sigma = sigma_neu;
 
-                // sigma = sigma_neu
-                sigma = sigma_neu;
-
-                // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
+            // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
         } while (sqrt(sigma) > tol);
 
