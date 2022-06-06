@@ -12,6 +12,18 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         // u   - Part of the inital guess for the solution
         // tol - Toleranz (stopping criteria)
         
+        int myid;
+        MPI_Comm_rank(comm,&myid);
+
+        int r0 = 0;
+        if(myid==0){
+            if(r0==0){
+                printf("AKKUMULATION/DDOT PARALLEL!\n");
+            }else{
+                printf("AKKUMULATION/DDOT RANK0\n");
+            }
+        }
+
         // gather variables for readability
 		index nfixed = mesh_loc->nfixed_loc;
 		index* fixed = mesh_loc->fixed_loc;
@@ -42,11 +54,23 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
         // w = Akkumulation (Summe über Prozessoren)
         double w[n];                                                            // Dimension??
-        accum_vec(mesh_loc, r, w, comm);
+        if(r0==0){
+            accum_vec(mesh_loc, r, w, comm);
+        }else{
+            accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
+        }
 
         // sigma = w'*r (Skalarprodukt)
-        double sigma_0 = ddot_parallel(w, r, n, comm);
+
+        double sigma_0;
+        if(r0==0){
+            sigma_0 = ddot_parallel(w,r,n,comm);
+        }else{
+            sigma_0 = get_sigma(w,r,n);
+        }
         double sigma = sigma_0;
+
+        if(myid==0) printf("SIGMA_0 = %f\n",sigma_0);
 
         // d = w
         double d[n];
@@ -59,6 +83,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
                 exit(0);
         }
 
+        double sigma_neu;
         size_t k = 0;
          do {
                 k++;
@@ -89,10 +114,18 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
                 inc_dir_r(r, fixed, nfixed);
 
                 // w = Akkumulation (Summe über Prozessoren (C*r))
-                accum_vec(mesh_loc, r, w, comm);              // Passt das so??
+                if(r0==0){
+                    accum_vec(mesh_loc, r, w, comm);
+                }else{
+                    accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
+                }
 
                 // sigma_neu = w' * r
-                double sigma_neu = ddot_parallel(w, r, n, comm);
+                if(r0==0){ 
+                    sigma_neu = ddot_parallel(w,r,n,comm);
+                }else{
+                    sigma_neu = get_sigma(w,r,n);
+                }
 
                 // d = (sigma_neu/sigma)*d + w
                 blasl1_daxpy(d, w, n, 1.0, sigma_neu / sigma);
@@ -104,6 +137,9 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
         } while (sqrt(sigma) > tol);
 
+        if(myid==0){
+            prinf("ITERATIONS FOR SOLVING: %d\n",k);
+        }
         free(ad);
         
         // write dirichlet data at right position in solution vector

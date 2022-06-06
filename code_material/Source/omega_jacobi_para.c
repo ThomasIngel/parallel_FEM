@@ -176,7 +176,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         if(r0==0){
             accum_vec(mesh_loc, r, w, comm);
         }else{
-        accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
+            accum_vec_r0(mesh_loc->c,r,w,n,mesh_loc->ncoord_glo);
         }
      
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
