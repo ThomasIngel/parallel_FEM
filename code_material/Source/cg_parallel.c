@@ -5,6 +5,55 @@
 #include <mpi.h>
 #include "blas_level1.h"
 
+double* make_global_r0(index* c,double* r,double* rhs_glob,index nlocal){
+  for(int i=0;i<nlocal;i++){
+    rhs_glob[c[i]] = r[i];
+  }
+  return rhs_glob;
+}
+
+void make_local_r0(index* c,double* rhs_glob,double* r,index nlocal){
+  for(int i=0;i<nlocal;i++){
+     r[i] = rhs_glob[c[i]];
+  }
+}
+
+void accum_vec_r0(index* c, double* vec, double* accum, index nloc, index n){
+    // Akkumuliert vec in accum (beide DIM nloc)
+    double* vec_loc = calloc(n,sizeof(double));
+    double accum_buff[n];
+    MPI_Allreduce(
+        make_global_r0(c,vec,vec_loc,nloc),
+        accum_buff,
+        n,
+        MPI_DOUBLE,
+        MPI_SUM,
+        MPI_COMM_WORLD);
+    free(vec_loc);
+    make_local_r0(c,accum_buff,accum,nloc);
+}
+
+double* ddot_local(double* w, double* r, index nloc, double* ddot_loc){
+  ddot_loc[0] = 0;
+  for(int i=0;i<nloc;i++){
+    ddot_loc[0] += w[i]*r[i];
+  }
+  return ddot_loc;
+}
+
+double get_sigma(double* w, double* r, index nloc){
+  double ddot[1];
+  double ddot_loc[1];
+  MPI_Allreduce(
+    ddot_local(w,r,nloc,ddot_loc),
+    ddot,
+    1,
+    MPI_DOUBLE,
+    MPI_SUM,
+    MPI_COMM_WORLD);
+  return ddot[0];
+}
+
 void cg_parallel(const sed *A, const double *b, double *u, double tol, 
 		double (*f_dir)(double *), mesh_trans* mesh_loc, MPI_Comm comm) {
         // A   - Part of the stiffness matrix (sed Format!)
@@ -15,12 +64,12 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         int myid;
         MPI_Comm_rank(comm,&myid);
 
-        int r0 = 0;
-        if(myid==0){
+        int r0 = 1;
+        if(myid==1){
             if(r0==0){
-                printf("AKKUMULATION/DDOT PARALLEL!\n");
+                printf("\nAKKUMULATION/DDOT PARALLEL!\n");
             }else{
-                printf("AKKUMULATION/DDOT RANK0\n");
+                printf("\nAKKUMULATION/DDOT RANK0\n");
             }
         }
 
@@ -138,7 +187,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
         } while (sqrt(sigma) > tol);
 
         if(myid==0){
-            prinf("ITERATIONS FOR SOLVING: %d\n",k);
+            printf("ITERATIONS FOR SOLVING: %d\n",k);
         }
         free(ad);
         

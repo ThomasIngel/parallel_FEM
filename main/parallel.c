@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
 
   t0 = walltime();
   // SOLVE PROBLEM
-  int change = 0;
+  int change = 1;
   if(change==0){
     omega_jacobi(mesh_loc->ncoord_loc, S, b, u, omega, tol, u_D, mesh_loc, MPI_COMM_WORLD);
   }

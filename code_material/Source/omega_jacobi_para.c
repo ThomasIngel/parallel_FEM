@@ -4,7 +4,7 @@
 #include "mesh_trans.h"
 #include <mpi.h>
 #include "blas_level1.h"
-
+/*
 double* make_global_r0(index* c,double* r,double* rhs_glob,index nlocal){
   for(int i=0;i<nlocal;i++){
     rhs_glob[c[i]] = r[i];
@@ -52,7 +52,7 @@ double get_sigma(double* w, double* r, index nloc){
     MPI_SUM,
     MPI_COMM_WORLD);
   return ddot[0];
-}
+}*/
 
 void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
