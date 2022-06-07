@@ -4,12 +4,16 @@
 #include <unistd.h>
 
 void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_Comm comm){
-  // u_loc hat die globalen Dimensionen
+  // Akkumuliert den Ergebnisvektor u_loc (hat bereits globale Dimensionen) über alle Prozesse und sendet Ergebnisse an rank 0
+  // Kommunikation hier nur über rank 0
+  // ACHTUNG: Keine Aufsummierung, nur Zusammenstellung des Gesamtvektors
+
   if(!(myid == 0)){
-    // SEND Ergebnisse an rank 0
+  // SEND Ergebnisse an rank 0
     MPI_Send(u_loc, ncoords, MPI_DOUBLE, 0, myid, comm);
   }
-  // MPI_Barrier(comm);
+  // RECV Ergebnisse von allen Prozessen
+  // Geht erhaltene Vektoren durch und übernimmt Werte für lokalen Vektor nur, falls dies an diesem Index noch nicht geschehen ist
   if(myid==0){
     bool done[ncoords];
     for(int i=0;i<ncoords;i++){
@@ -32,13 +36,15 @@ void accum_result(double* u_loc, index ncoords, index myid, index numprocs, MPI_
 
 
 void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) {
-  
+  // Akkumuliert Vektor r über alle Prozesse von comm und schreibt Ergebnis in m_i
+  // Kommuniziert nur mit den notwendigen Nachbarn!
+
   MPI_Barrier(comm);
 
 	int myid;
   int i;
 	MPI_Status stat;
-	MPI_Comm_rank(comm,&myid); /* and this processes' rank is */
+	MPI_Comm_rank(comm,&myid); 
  
   for(i=0;i<mesh_loc->ncoord_loc;i++) m_i[i] = r_loc[i];
   
@@ -110,15 +116,7 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
       }
     }
   }
-
-  // WAIT FOR BLACK
-  /*
-  sleep(myid);
-  printf("\nProcessor %d rhs: ", myid);
-  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",b[i]);
-  printf("\n");
-  */
-  
+ 
   // REDS AKKUM MIT BLACK NACHBARN
   if(!mesh_loc->black){           // REDS RECEIVEN DATA VON ALLEN BLACK NACHBARGEBIETEN
     for(i=0;i<4;i++){
@@ -192,41 +190,34 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
   if(mesh_loc->black){    // BLACK RECEIVED
     // EAST
     if(mesh_loc->neighbours[1] > -1){ 
-      // printf("\nMYID = %d, BEKOMME EAST VON %d",myid,mesh_loc->neighbours[1]);
       MPI_Recv(data, 2, MPI_DOUBLE, mesh_loc->neighbours[1], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
       m_i[2] = data[0]; m_i[1] = data[1];
     }else{  // KEINE DOMAIN IN EAST
       // RECV VON SOUTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[0] > -1){
-        // printf("\nMYID = %d, WARTE FÜR SOUTH VON %d",myid,mesh_loc->neighbours[0]);
         MPI_Recv(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[0], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
         m_i[1] = rand;
       }
-      
       // RECV VON NORTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[2] > -1){
-        // printf("\nMYID = %d, WARTE FÜR NORTH VON %d",myid,mesh_loc->neighbours[2]);
         MPI_Recv(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[2], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
         m_i[2] = rand;
       }
     }
     // WEST
     if(mesh_loc->neighbours[3] > -1){ 
-      // printf("\nMYID = %d, BEKOMME WEST VON %d",myid,mesh_loc->neighbours[3]);
       MPI_Recv(data, 2, MPI_DOUBLE, mesh_loc->neighbours[3], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
       m_i[3] = data[0]; m_i[0] = data[1];
     } else{  // KEINE DOMAIN IN WEST
       // RECV VON SOUTH, FALLS VORHANDEN
       // THIS -----------------------------------
       if(mesh_loc->neighbours[0] > -1){
-        // printf("\nMYID = %d, WARTE FÜR SOUTH VON %d",myid,mesh_loc->neighbours[0]);
         MPI_Recv(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[0], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
         m_i[0] = rand;
       }
       // ----------------
       // RECV VON NORTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[2] > -1){
-        // printf("\nMYID = %d, WARTE FÜR NORTH VON %d",myid,mesh_loc->neighbours[2]);
         MPI_Recv(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[2], MPI_ANY_TAG, comm, MPI_STATUS_IGNORE);
         m_i[3] = rand;
       }
@@ -235,44 +226,36 @@ void accum_vec(mesh_trans* mesh_loc, double* r_loc, double* m_i, MPI_Comm comm) 
     // EAST
     if(mesh_loc->neighbours[1] > -1){ 
       data[0] = m_i[2]; data[1] = m_i[1];
-      // printf("\nMYID = %d, SCHICKE EAST AN %d",myid,mesh_loc->neighbours[1]);
       MPI_Send(data, 2, MPI_DOUBLE, mesh_loc->neighbours[1], 0, comm);
     }else{  // KEINE DOMAIN IN EAST
       // SCHICK SOUTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[0] > -1){
         rand = m_i[1];
-        // printf("\nMYID = %d, SCHICKE SOUTH AN %d",myid,mesh_loc->neighbours[0]);
         MPI_Send(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[0], 0, comm);
       }
       // SCHICK NORTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[2] > -1){
         rand = m_i[2];
-        // printf("\nMYID = %d, SCHICKE NORTH AN %d",myid,mesh_loc->neighbours[2]);
         MPI_Send(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[2], 0, comm);
       }
     }
     // WEST
     if(mesh_loc->neighbours[3] > -1){ 
       data[0] = m_i[3]; data[1] = m_i[0];
-      // printf("\nMYID = %d, SCHICKE WEST AN %d",myid,mesh_loc->neighbours[3]);
       MPI_Send(data, 2, MPI_DOUBLE, mesh_loc->neighbours[3], 0, comm);
     }else{  // KEINE DOMAIN IN WEST
       // SCHICK SOUTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[0] > -1){
         rand = m_i[0];
-        // printf("\nMYID = %d, SCHICKE SOUTH AN %d",myid,mesh_loc->neighbours[0]);
         MPI_Send(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[0], 0, comm);
       }
-      // THIS-----------------------------------
       // SCHICK NORTH, FALLS VORHANDEN
       if(mesh_loc->neighbours[2] > -1){
         rand = m_i[3];
-        // printf("\nMYID = %d, SCHICKE SOUTH AN %d",myid,mesh_loc->neighbours[2]);
         MPI_Send(&rand, 1, MPI_DOUBLE, mesh_loc->neighbours[2], 0, comm);
       }
       // ----------------------------------------
     }
   }
-  
   MPI_Barrier(comm);
 }

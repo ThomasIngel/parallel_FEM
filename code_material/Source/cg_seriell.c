@@ -1,5 +1,3 @@
-// cg_seriell Version 27.05.22
-
 #include "hpc.h"
 #include "blas_level1.h"
 #include "mesh_trans.h"

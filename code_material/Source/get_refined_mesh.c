@@ -1,7 +1,7 @@
 #include "hpc.h"
 
-// Load Hesh from file and refine norefine times
 mesh *get_refined_mesh(int norefine){
+    // Load Hesh from file and refine norefine times
 
     // Load and initialize Hesh
     mesh* I;

@@ -1,5 +1,3 @@
-// cg_parallel
-
 #include "hpc.h"
 #include "mesh_trans.h"
 #include <mpi.h>
@@ -41,7 +39,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
        	inc_dir_r(r, fixed, nfixed);
 
         // w = Akkumulation (Summe über Prozessoren)
-        double w[n];                                                            // Dimension??
+        double w[n];                                                            
         accum_vec(mesh_loc, r, w, comm);
 
         // sigma = w'*r (Skalarprodukt)
@@ -89,7 +87,7 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
                 inc_dir_r(r, fixed, nfixed);
 
                 // w = Akkumulation (Summe über Prozessoren (C*r))
-                accum_vec(mesh_loc, r, w, comm);              // Passt das so??
+                accum_vec(mesh_loc, r, w, comm);              
 
                 // sigma_neu = w' * r
                 double sigma_neu = ddot_parallel(w, r, n, comm);
@@ -99,8 +97,6 @@ void cg_parallel(const sed *A, const double *b, double *u, double tol,
 
                 // sigma = sigma_neu
                 sigma = sigma_neu;
-
-                // printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
 
         } while (sqrt(sigma) > tol);
 
