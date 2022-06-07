@@ -47,14 +47,12 @@ double F_vol( double x[2], index typ )
 
 double g_Neu( double x[2], index typ )
 {
-  // return ( x[0] * x[1] );
   return 0.0;
 }
 
 double u_D( double x[2])
 {
   return ( 2.0 );
-  // return ( x[0] * x[1] );
 }
 
 int main(int argc, char *argv[]) {
@@ -121,6 +119,7 @@ int main(int argc, char *argv[]) {
     mesh_free(H);
   }
   MPI_Barrier(MPI_COMM_WORLD);
+
   // PRINT TIME
   if(myid==0){
     printf("Time to build & split Mesh:\n");
@@ -170,6 +169,7 @@ int main(int argc, char *argv[]) {
   }
 
   t0 = walltime();
+
   // SOLVE PROBLEM
   int change = 1;
   if(change==0){
@@ -191,19 +191,13 @@ int main(int argc, char *argv[]) {
   sed_free(S);
   free(b);
 
-  /*
-  sleep(myid);
-  printf("\nProcessor %d lokales Ergebnis: ", myid);
-  for(i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",u[i]);
-  printf("\n");*/
-
-  // Globalen Lösungsvektor auf rank 0 zusammenstellen
+   // Globalen Lösungsvektor auf rank 0 zusammenstellen
   double* u_loc = calloc(ncoords, sizeof(double));
   make_global(mesh_loc-> c, u, u_loc, mesh_loc->ncoord_loc);
   free(u);
   accum_result(u_loc, ncoords, myid, numprocs, MPI_COMM_WORLD);
 
-  // Finale globale Lösung printen
+  // Finale globale Lösung printen und free
   if(myid == 0){
 /*
     printf("\nProcessor %d globales Ergebnis: ", myid);

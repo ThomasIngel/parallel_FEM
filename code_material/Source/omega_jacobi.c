@@ -1,5 +1,3 @@
-// omega Jacobi algorithm
-
 #include "hpc.h"
 #include "blas_level1.h"
 #include "mesh_trans.h"
@@ -54,11 +52,5 @@ omega_jacobi_seriell(size_t n,
                 // sigma = r' * r , computing the scalarproduct with the new residuum
                 sigma = blasl1_ddot(r,r,n);
 
-                // Muss ich irgendwas free()?
-
-                // Oben bei for, stimmt das oder brauche ich pointer??
-               
-                printf("k = %d \t norm = %10g\n", k, sqrt(sigma));
         } while (sqrt(sigma) > tol);
-        
 }

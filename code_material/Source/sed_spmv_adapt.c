@@ -1,9 +1,10 @@
 // Adapted sed_spmv - 17.05.22 (mit alpha)
 
 #include "hpc.h"
-/* y = alpha * A * x + y */
+
 index sed_spmv_adapt (const sed *A, const double *x, double *y, double alpha)
 {
+  // Angepasste sed_spmv funktion: y = alpha * A * x + y 
   index p, j, m, n, nz, *Ap, *Ai ;
   double *Ax, tmp ;
 

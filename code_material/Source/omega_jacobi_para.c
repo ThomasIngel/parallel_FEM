@@ -1,9 +1,9 @@
-// omega Jacobi algorithm parallel
-
 #include "hpc.h"
 #include "mesh_trans.h"
 #include <mpi.h>
 #include "blas_level1.h"
+
+// Paralleler omega_jacobi solver
 
 void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double omega, double tol, double (*f_dir)(double *), mesh_trans *mesh_loc, MPI_Comm comm) {
     // n     - Amount of columns of A (also length of most vectors in the algorithm)
@@ -40,7 +40,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // Alg. 6.6, line 2: d := sum(C^T_s * d_s), s = 1,...,P
     // accumulated version of the diagonal
     // P is the amount of processors on which we split our problem
-    // C is an incidence matrix
+    // C is an incidence vector
     double diag_buff[n];
     accum_vec(mesh_loc, diag_inv, diag_buff, comm);
     
@@ -61,7 +61,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     // Alg. 6.6, line 6: w := sum(C^T_s * r_s), s = 1,...,P
     // accumulated version of the residuum
     // P is the amount of processors on which we split our problem
-    // C is an incidence matrix
+    // C is an incidence vector
     double w[n];
     accum_vec(mesh_loc, r, w, comm);
 
@@ -99,7 +99,7 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
         // Alg. 6.6, line 13: w := sum(C^T_s * r_s), s = 1,...,P
         // accumulated version of the residuum
         // P is the amount of processors on which we split our problem
-        // C is an incidence matrix
+        // C is an incidence vector
         accum_vec(mesh_loc, r, w, comm);
      
         // Alg. 6.6, line 14: sigma := sigma_0 := <w,r>
@@ -111,12 +111,4 @@ void omega_jacobi(size_t n, const sed *A, const double *b, double *u, double ome
     
     // write dirichlet data in solution vector
     inc_dir_u(u, dir, fixed, nfixed);
-    /*index myid2;
-    MPI_Comm_rank(comm,&myid2);
-    sleep(myid2);
-    printf("\nProcessor %d m_i: ", myid2);
-    for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",w[i]);
-    printf("\nProcessor %d r_i: ", myid2);
-    for(int i=0;i<mesh_loc->ncoord_loc;i++) printf("%f ",r[i]);
-    printf("\nProcessor %d local scalar: %f", myid2, sigma);*/
 }
